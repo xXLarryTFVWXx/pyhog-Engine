@@ -177,20 +177,31 @@ class Character:
         self.cells = cells
         self.heldItem = None
         # self.inv = Inv(10)
-        self.up = "up"
+        self.upDir = 0 # 0 = up; 1 = left; 2 = down; 3 = right
         self.x = self.y = 20
+        self.xvel = self.yvel = 0
+        self.__top__ = 12
     def draw(self, cycle, duration):
         self.surf.blit(self.sheet, (self.x, self.y), (self.cells[cycle][self.frame]))
     def move(self):
+            self.yvel += grv
+            if self.yvel > 16:
+                self.yvel = 16
+            if self.yvel < 0 and self.yvel > -4:
+                xvel -= ((self.xvel // 0.125) / 256)
+            self.x += self.xvel
+            self.y += self.yvel
             if curlvl.colA[self.rect.bottom][self.rect.right][4] > 0:
-                if self.up == "up":
+                if self.upDir == 0:
                     self.y -= 1
-                elif self.up == "left":
+                elif self.upDir == 1:
                     self.x -= 1
-                elif self.up == "down":
+                elif self.upDir == 2:
                     self.y += 1
                 else:
                     self.x += 1
+
+
 class Inv:
     def __init__(self, slotCount:int=9, dropable:bool=False):
         self.slots = []
