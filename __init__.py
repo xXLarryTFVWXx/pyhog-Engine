@@ -31,9 +31,11 @@
         """
 import os, sys, math, functools, pygame
 import pyhog.graphics as graphics
+import pyhog.physics as physics
 curmnu = None
-const = {'github': "xXLarryTFVWXx"}
+github = "xxlarytfvwxx"
 
+phi = (1/math.sqrt(5)) / 2
 acc = 0.046875
 dec = 0.5
 frc = acc
@@ -75,8 +77,8 @@ def get_click(button=0):
     buttons = pygame.mouse.get_pressed()
     if button == 0:
         return bool(sum(buttons))
-    elif button in range(3):
-        return bool(buttons[button])
+    elif button in range(4):
+        return bool(buttons[button-1])
     else:
         raise TypeError(f"expected for button to be between 0 and 2 got: {button}")
 class Window:
@@ -99,6 +101,7 @@ class Window:
             self.surf = pygame.display.set_mode((self.h, self.w), pygame.FULLSCREEN|pygame.SCALED)
             
         self.x, self.y, self.w, self.h = self.surf.get_rect()
+        self.renderorigin = pygame.Vector2(self.w//2,self.h//2)
         self.t = pygame.display.set_caption(self.title)
     def clear(self):
         self.surf.fill(self.bgcolor)
@@ -115,7 +118,9 @@ def key_pressed(k=""):
     if sum(keys) > 0:
         if k.lower() in kdict:
             return k == "" or bool(keys[kdict[k.lower()]])
-    
+def get_mouse_pos():
+    return pygame.mouse.get_pos()
+
 def load_Music(file):
     pygame.mixer_music.load(file)
 def play_music(loop=0, t=0.0):
@@ -131,11 +136,11 @@ def clock():
 
 
 class Spritesheet:
-    def __init__(self, filename, cells:dict={"walk":[(0,0,64,64)]}):
+    def __init__(self, filename, cells:dict={"stand":[(0,0,64,64)]}):
         self.cells = cells
         self.filename = filename
         self.frame = 0
-        self.cycle = 'walk'
+        self.cycle = 'stand'
         self.cycleTimer = 120
         self.x = self.y = 0
     def load(self):
@@ -155,74 +160,41 @@ class Spritesheet:
         self.nextFrame()
         
 
-class Item(Spritesheet):
-    def __init__(self, surf, art, name="\x00"):
-        super().__init__(surf, art, {'static':{'pos': (0,0), 'size': (0,0)}})
-        self.name = name
-        self.count = 1
-    def hold(self, holder):
-        self.holder = holder
-        self.holder.heldItem = self
-    def remove(count):
-        if count <= -1:
-            self.count = 0
-        elif count > 0:
-            self.count -= count
-        else:
-            print("Why?")
-class Character:
-    def __init__(self, surf, art, cells:dict={"stand": [0,0,64,64]}):
+
+class Character(Spritesheet):
+    def __init__(self, surf, characterName, cells:dict={"stand": [0,0,64,64]}):
+        super().__init__( f"Art/Characters/{characterName}/sheet.png", cells)
         self.surf = surf
-        self.art = art
-        self.cells = cells
-        self.heldItem = None
-        # self.inv = Inv(10)
-        self.upDir = 0 # 0 = up; 1 = left; 2 = down; 3 = right
+        self.gsp = 0
+        self.up = -90 # this is in degrees
         self.x = self.y = 20
+        self.vec = pygame.Vector2((self.x, self.y))
         self.xvel = self.yvel = 0
-        self.__top__ = 12
-    def draw(self, cycle, duration):
-        self.surf.blit(self.sheet, (self.x, self.y), (self.cells[cycle][self.frame]))
-    def move(self):
-            self.yvel += grv
-            if self.yvel > 16:
-                self.yvel = 16
-            if self.yvel < 0 and self.yvel > -4:
-                xvel -= ((self.xvel // 0.125) / 256)
-            self.x += self.xvel
-            self.y += self.yvel
-            if curlvl.colA[self.rect.bottom][self.rect.right][4] > 0:
-                if self.upDir == 0:
-                    self.y -= 1
-                elif self.upDir == 1:
-                    self.x -= 1
-                elif self.upDir == 2:
-                    self.y += 1
-                else:
-                    self.x += 1
-
-
-class Inv:
-    def __init__(self, slotCount:int=9, dropable:bool=False):
-        self.slots = []
-        self.__dropable = dropable
-    def add(self, item):
-        try:
-            slot = self.slots.index(item)
-        except ValueError:
-            self.slots.append(item)
+        self.layer = 0
+        self.ang = 0
+        self.top = top
+    def update(self, drc: str):
+        if drc > 0:
+            if self.gsp < 0:
+                self.gsp += dec
+                if self.gsp >= 0:
+                    self.gsp = 0.5
+            elif self.gsp > 0:
+                self.gsp += acc
+                if self.gsp > self.top:
+                    self.gsp = self.top
+        elif drc < 0:
+            if self.gsp > 0:
+                self.gsp -= dec
+                if self.gsp <= 0:
+                    gsp = -0.5
+            elif self.gsp < 0:
+                self.gsp -= acc
+                if abs(self.gsp) > top:
+                    self.gsp = -top
         else:
-            self.slots[slot].count += 1
-            
-    def remove(self, item=None, slot=0, count=-1):
-        print("This function is yet to be completed\nSo it may not work as intended")
-        if item == None:
-            self.slots[slot].remove(count)
-        else:
-            slot = self.slots.index(item)
-            self.slots[slot].remove(count)
-        if self.slots[slot].count < 1:
-            temp = self.slots.pop(slot)
+            self.gsp = min(abs(self.gsp), frc) * math.sin(self.gsp)
+                
 
 class Level:
     def __init__(self, surf, layout, layerA, layerB, zname="Testing", actnum=1, bgm=None, bg=None, x=0, y=0):
@@ -241,7 +213,7 @@ class Level:
         self.layerB = layerB
         print(self.bgm)
         self.surfRect = self.surf.get_rect()
-    def load(self):
+    def load(self, characters=({}), enemies=({})):
         global Hbtns, curlvl
         if not self.bg == None:
             if type(self.bg) == str:
@@ -269,12 +241,25 @@ class Level:
         self.colA = graphics.load_image(self.layerA, False)
         if not self.layerB is None:
             self.colB = graphics.load_image(self.layerB, False)
+        self.characters, self.enemies = characters, enemies
+        
+            
         self.start()
         curlvl = self
     def add_decor(self, image):
         self.decor = graphics.load_image(image)
         self.drect = self.decor.get_rect()
         self.drect.center = self.FG.get_rect()
+    def switchLayer(self, character=("Enemy", "characterObject"), fromLayer=None, toLayer=None):
+        if character == None or fromLayer == None or toLayer == None:
+            raise TypeError("One or more arguments are None Character:{character} FromLayer:{FromLayer} toLayer:{toLayer}")
+        else:
+            if character[0].lower() == "enemy":
+                self.enemies[fromLayer].remove(character[1])
+                self.enemies[toLayer].append(character[1])
+            elif character[0].lower() == "characters":
+                self.characters[fromLayer].remove(character[1])
+                self.characters[toLayer].append(character[1])
     def scroll(self, ang, vel):
         self.vec.from_polar((vel,ang))
         self.x -= self.vec[0]
@@ -285,6 +270,7 @@ class Level:
             self.x = -self.rect.width+self.surfRect.width
         if self.y < -self.rect.height+self.surfRect.height:
             self.y = -self.rect.height+self.surfRect.height
+        
             
     def start(self):
         global curlvl, Hbtns
@@ -297,7 +283,26 @@ class Level:
     def draw(self):
         if not self.BG == None:
             self.surf.blit(self.bgimg, (0,0))
+        for character in self.characters[2]:
+            if self.renderorigin.distance_to(pygame.Vector2(character.rect.center)) <= 300:
+                character.render()
+        for enemy in self.enemies[2]:
+            if self.renderorigin.distance_to(pygame.Vector2(enemy.rect.center)) <= 300:
+                enemy.render()
         self.surf.blit(self.FG, (self.x, self.y))
+        for enemy in self.enemies[1]:
+            if self.renderorigin.distance_to(pygame.Vector2(enemy.rect.center)) <= 300:
+                enemy.render()
+        for character in self.characters[1]:
+            if self.renderorigin.distance_to(pygame.Vector2(character.rect.center)) <= 300:
+                character.render()
+        for enemy in self.enemies[0]:
+            if self.renderorigin.distance_to(pygame.Vector2(enemy.rect.center)) <= 300:
+                enemy.render()
+        for character in self.characters[0]:
+            if self.renderorigin.distance_to(pygame.Vector2(character.rect.center)) <= 300:
+                character.render()
+        
     def unload(self):
         global Hbtns, curlvl
         Hbtns = False
@@ -409,27 +414,3 @@ class sky_mod:
         self.surf = surf
     def draw(self):
         self.surf.blit(self.img, self.surf.get_rect())
-def get_mouse_pos():
-    return pygame.mouse.get_pos()
-
-@functools.lru_cache(3)
-class Battle:
-    def __init__(self, surf, bgFile=None, enemies:list=[], music=None):
-        self.surf = surf
-        self.background = background
-        self.enemies = enemies[:3]
-        self.music = music
-    def load(self):
-        if not self.music is None:
-            load_Music(self.music)
-        else:
-            print("There is no music to load")
-        if not self.background is None:
-            self.background = load_image(self.bgFile)
-    def loop(self):
-        play_music(-1)
-        while True:
-            if Flee:
-                return Flee
-            
-        
