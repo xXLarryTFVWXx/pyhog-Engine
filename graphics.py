@@ -1,4 +1,27 @@
-import os, pygame
+import os, functools, pygame
+class Spritesheet:
+    def __init__(self, filename, cells:dict={"stand":[(0,0,64,64)]}):
+        self.cells = cells
+        self.filename = filename
+        self.frame = 0
+        self.cycle = 'stand'
+        self.cycleTimer = 120
+        self.x = self.y = 0
+    def load(self):
+        self.sheet = pygame.image.load(filename).convert_alpha()
+    def changeCycle(self, cycle, cycleTimer):
+        self.cycle = self.cells[cycle]
+        self.cycleTimer = cycleTimer
+    @functools.lru_cache(10)
+    def nextFrame(self):
+        if self.cycleTimer == 0:
+            self.frame += 1
+            if self.frame >= len(self.cells[self.cycle]):
+                self.frame = 0
+        self.cycleTimer -= 1
+    def render(self):
+        self.surf.blit(self.sheet, (self.x, self.y), self.cells[self.cycle][self.frame])
+        self.nextFrame()
 
 imgext = ["png", "jpeg", "jpg", "jpe", "jfif", "bmp", "gif", "dip", "tiff", "tif", "heic"]
 
