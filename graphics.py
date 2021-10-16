@@ -44,3 +44,9 @@ def load_image(filename=None, convert=True):
         raise TypeError("You forgot to supply a filename for the image")
 def get_palette(image):
     return image.get_palette()
+
+class sky_mod:
+    def __init__(self, surf, art):
+        self.surf = surf
+        self.art = art
+        

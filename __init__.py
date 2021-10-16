@@ -31,9 +31,9 @@
 """
 import os, sys, math, functools, pygame
 from . import graphics
-from . import entity
+from . import dynamics
 from . import state
-from . import menu
+from . import gui
 curmnu = None
 github = "xxlarytfvwxx"
 
