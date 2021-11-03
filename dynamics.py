@@ -1,8 +1,8 @@
 import ctypes, math, random, pygame
-from .graphics import *
+from . import graphics
 atkdur = 0
 
-class Character(Spritesheet):
+class Character(graphics.Spritesheet):
     def __init__(self, pos, surf, characterName, cells:dict={"stand": [0,0,64,64]}):
         super().__init__( f"Art/Characters/{characterName}/sheet.png", cells)
         self.surf = surf
@@ -104,18 +104,18 @@ class Boss(Character):
     
 class Level:
     def __init__(self, surf, fg, colliders, name, act=1, bgm=None, bg=None, x=0, y=0):
-        self.surf, self.fg, self.name, self.act, self.bgm, self.bg, self.x, self.y = surf, fg, naem, act, bgm, bg, x, yield
-        self.colFiles = *colliders
+        self.surf, self.fg, self.name, self.act, self.bgm, self.bg, self.x, self.y = surf, fg, name, act, bgm, bg, x, y
+        self.colFiles = colliders
     def load(self):
         self.collision = {"colA":[], "colB": []}
-        if not len(self.colFiles) > 2
-        for num, file in enumerate(self.colFiles):
-            if num == 0:
-                self.collision["colA"] = graphics.load_image(file)
-            else:
-                self.collision["colB"] = graphics.load_image(file)
+        if not len(self.colFiles) > 2:
+            for num, file in enumerate(self.colFiles):
+                if num == 0:
+                    self.collision["colA"] = graphics.load_image(file)
+                else:
+                    self.collision["colB"] = graphics.load_image(file)
     def unload(self):
         pygame.mixer.music.unload()
-    def collide(self, caller)
+    def collide(self, caller):
         while self.collision[caller.layer].get_at(caller.pos)[3] == 255:
             caller.pos.from_polar(1, caller.up)

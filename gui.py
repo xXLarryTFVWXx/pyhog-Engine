@@ -1,5 +1,45 @@
-import math
+import math, pygame
 from . import state
+from . import audio
+
+def get_mouse():
+    return pygame.Rect(pygame.mouse.get_pos(), (1,1))
+def get_click(button=0):
+    buttons = pygame.mouse.get_pressed()
+    if button == 0:
+        return bool(sum(buttons))
+    elif button in range(4):
+        return bool(buttons[button-1])
+    else:
+        raise TypeError(f"expected for button to be between 0 and 2 got: {button}")
+
+class Window:
+    def __init__(self, height, width, bgcolor="black", title="pyhog-engine", fullscreen=False):
+        self.h = height
+        self.w = width
+        if type(bgcolor) == str:
+            self.bgcolor = pygame.Color(bgcolor)
+        elif type(bgcolor) == tuple or type(bgcolor) == list:
+            if not len(bgcolor) > 4 or not len(bgcolor) > 2:
+                raise ValueError("The color is of the wrong size")
+            else:
+                self.bgcolor == bgcolor
+        self.title = title
+        self.fullscreen = fullscreen
+    def display(self):
+        if not self.fullscreen:
+            self.surf = pygame.display.set_mode((self.h, self.w))
+        else:
+            self.surf = pygame.display.set_mode((self.h, self.w), pygame.FULLSCREEN|pygame.SCALED)
+            
+        self.x, self.y, self.w, self.h = self.surf.get_rect()
+        self.renderorigin = pygame.Vector2(self.w//2,self.h//2)
+        self.t = pygame.display.set_caption(self.title)
+    def clear(self):
+        self.surf.fill(self.bgcolor)
+    def update(self):
+        pygame.display.flip()
+        pygame.event.clear()
 
 class Box:
     def __init__(self, surf, pos=[0,0], width=0, height=0, **kwargs):
@@ -90,7 +130,7 @@ class Menu:
             self.bgm = bgm
     def open(self):
         try:
-            load_Music(self.bgm)
+            audio.load_Music(self.bgm)
             if not get_busy():
                 play_music()
         except AttributeError:

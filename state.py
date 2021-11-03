@@ -1,4 +1,1 @@
-mode = None
-curlvl = None
-curmnu = None
-inBoss = None
+file = open("state.pyh", "rb+")
