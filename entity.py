@@ -58,6 +58,8 @@ class Character(Spritesheet):
                 while curlvl['colB'][self.rect.bottom][self.rect.left][3] > 0:
                     self.vec.from_polar()
                     self.rect = pygame.Rect(*self.vec, self.width, self.height)
+        # rotate direction vector to that of the current rotation cell of the level.
+        
 
 class Boss(Character):
     def __init__(self, surf, name, cells, hits, spawn, behaviors=()):

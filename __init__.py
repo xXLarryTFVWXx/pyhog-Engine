@@ -121,8 +121,3 @@ def get_busy():
     return bool(pygame.mixer_music.get_busy())
 def clock():
     return pygame.time.Clock()
-        
-
-
-
-
