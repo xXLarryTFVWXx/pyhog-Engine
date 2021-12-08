@@ -137,4 +137,5 @@ class Menu:
             print("there is no music")
         state.mode = "Menu"
         state.curmnu = self
+        state.curmnu.open()
      

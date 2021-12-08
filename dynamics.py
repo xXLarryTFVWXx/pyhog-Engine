@@ -58,6 +58,7 @@ class Character(graphics.Spritesheet):
                 while curlvl['colB'][self.rect.bottom][self.rect.left][3] > 0:
                     self.vec.from_polar()
                     self.rect = pygame.Rect(*self.vec, self.width, self.height)
+        # TODO: have a way to get the current angle of the ground.
 
 class Boss(Character):
     def __init__(self, surf, name, cells, hits, spawn, behaviors=()):
@@ -114,6 +115,14 @@ class Level:
                     self.collision["colA"] = graphics.load_image(file)
                 else:
                     self.collision["colB"] = graphics.load_image(file)
+        """
+        TODO: have a way to get angles of the tiles/blocks.
+        Possibly a seperate file for the angles?
+        """
+        self.angles = {
+            "colA": "",
+            "colB": ""
+        }
     def unload(self):
         pygame.mixer.music.unload()
     def collide(self, caller):
