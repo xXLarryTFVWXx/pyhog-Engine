@@ -1,6 +1,10 @@
-import math, pygame
-from . import state
+import ctypes, math, pygame
+from . import files
 from . import audio
+
+menus = {
+    "current": None
+}
 
 def get_mouse():
     return pygame.Rect(pygame.mouse.get_pos(), (1,1))
@@ -46,7 +50,7 @@ class Box:
         self.surf = surf
         self.pos = pos
         if 'size' in kwargs:
-            self.size = list(size)
+            self.size = list(kwargs["size"])
         else:
             self.size = [128, 64]
         if 'text' in kwargs:
@@ -71,20 +75,16 @@ class Box:
         
         if 'function' in kwargs:
             self.function = kwargs['function']
-            print(self.function)
             if 'hover' in kwargs:
-                print('We can hover')
                 self.hover = True
                 if 'hfgc' in kwargs:
                     self.hfgc = pygame.Color(kwargs['hfgc'])
                 else:
                     self.hfgc = pygame.Color('white')
-                    print("Hover foreground color set")
                 if 'hbgc' in kwargs:
                     self.hbgc = pygame.Color(kwargs['hbgc'])
                 else:
                     self.hbgc = pygame.Color('green')
-                    print("Hover background color set")
         else:
             self.function = None
         self.rect = pygame.Rect(self.pos, self.size)
@@ -101,7 +101,6 @@ class Box:
                 self.surf.blit(label, lRect)
             if not self.function == None:
                 if get_click(0):
-                    print("clicked")
                     self.function()
         else:
             pygame.draw.rect(self.surf, self.bgc, self.rect)
@@ -116,7 +115,7 @@ class Menu:
             Whether there are multiple buttons or not, just use a 2d matrix (e.g. [[BUTTON_OBJ]])
             
         """
-    def __init__(self, name, bg="cyan", bgm=None, buttons=[[]]):
+    def __init__(self, name, mnu_id, bg="cyan", bgm=None, buttons=[[]]):
 
         self.btns = buttons
         if type(bg) == str:
@@ -125,17 +124,30 @@ class Menu:
             else:
                 self.bgimg = bg
         elif type(bg) == tuple or type(bg) == list:
-            self.bgc = bgc
+            self.bgc = bg
         if not bgm==None:
             self.bgm = bgm
+        global menus, mnu
+        self.mnu_ID = mnu_id
+        new_id = ctypes.c_uint16(mnu_id)
+        if not new_id.value in menus:
+            menus[new_id.value] = self
+            
     def open(self):
         try:
-            audio.load_Music(self.bgm)
-            if not get_busy():
-                play_music()
+            audio.load_music(self.bgm)
+            if not audio.get_busy():
+                audio.play_music()
         except AttributeError:
             print("there is no music")
-        state.mode = "Menu"
-        state.curmnu = self
-        state.curmnu.open()
-     
+        except Exception as e:
+            print(e)
+        menus['current'] = self
+        files.set_state(0x00, self.mnu_ID)
+        
+        
+    
+def openMenu(mnu_id):
+    new_id = ctypes.c_uint16(mnu_id).value
+    if new_id in menus:
+        menus[new_id].open()

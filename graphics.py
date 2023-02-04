@@ -8,11 +8,12 @@ class Spritesheet:
         self.cycleTimer = 120
         self.x = self.y = 0
     def load(self):
-        self.sheet = pygame.image.load(filename).convert_alpha()
+        self.sheet = pygame.image.load(self.filename).convert_alpha()
+        self.loaded = True
     def changeCycle(self, cycle, cycleTimer):
         self.cycle = self.cells[cycle]
         self.cycleTimer = cycleTimer
-    @functools.lru_cache(10)
+    @functools.cache
     def nextFrame(self):
         if self.cycleTimer == 0:
             self.frame += 1
@@ -20,7 +21,7 @@ class Spritesheet:
                 self.frame = 0
         self.cycleTimer -= 1
     def render(self):
-        self.surf.blit(self.sheet, (self.x, self.y), self.cells[self.cycle][self.frame])
+        self.surf.blit(self.sheet, (self.pos.x, self.pos.y), self.cells[self.cycle][self.frame])
         self.nextFrame()
 
 imgext = ["png", "jpeg", "jpg", "jpe", "jfif", "bmp", "gif", "dip", "tiff", "tif", "heic"]
@@ -49,4 +50,9 @@ class sky_mod:
     def __init__(self, surf, art):
         self.surf = surf
         self.art = art
-        
+        self.loaded = False
+    def load(self):
+        self.drawer = load_image(self.art)
+        self.loaded = True
+    def draw(self):
+        self.surf.blit(self.drawer, (0,0))
