@@ -1,5 +1,5 @@
 """Pyhog file handler"""
-
+"""I might get rid of this, unless I use it for the save files."""
 """Version declaration"""
 __BRANCH__ = 0x01 # 0x01 is the master branch 0x02 is the prelease branch and 0x03 is the dev branch
 __REALYEAR__ = 2022
@@ -22,6 +22,8 @@ class VersionError(Exception):
     def __init__(self, msg):
         super().__init__(msg)
 
+
+# This is currently unused.
 def verify_version(file, data):
     """Verifies that the data's version is the same as the above Version"""
     file_ver = ""

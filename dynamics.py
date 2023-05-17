@@ -80,7 +80,7 @@ class Character(graphics.Spritesheet):
         self.location, angle_pre_equation = curlvl.collide(self)
         self.ang = (256-angle_pre_equation)*1.40625
         while self.location == "underground":
-            self.pos += pygame.Vector2(1,0).rotate(self.up)
+            self.pos += pygame.Vector2(0,-1)
             self.location, angle_pre_equation = curlvl.collide(self)
         else:
             self.grounded = self.location == "on surface"
@@ -174,12 +174,9 @@ class Level:
         pygame.mixer.music.unload()
         self.started = False
         del self.fgIMG, self.pixel, self.bgIMG, self.collision
-    def collide(self, caller):
-        if not caller.layer == 0:
-            collision_layer = self.collision[caller.layer]
-        else:
-            collision_layer = self.collision[0]
-        caller_pos = int(caller.pos.x), int(caller.pos.y)
+    def collide(self, caller) -> tuple[str, int]:
+        collision_layer = self.collision[caller.layer] if not caller.layer == 0 else self.collision[0]
+        caller_pos = pygame.Vector2(int(caller.pos.x), int(caller.pos.y))
         air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.up)
         self.pixel = collision_layer.get_at(caller_pos)
         air_detector = int(air_detector_base[0]), int(air_detector_base[1])
