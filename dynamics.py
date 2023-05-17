@@ -1,8 +1,4 @@
-import ctypes
-import math
-import random
-import functools
-import pygame
+import ctypes, math, random, functools, pygame
 from . import graphics, audio, files, variables
 
 curlvl = None
@@ -74,17 +70,13 @@ class Character(graphics.Spritesheet):
         else:
             self.gsp -= min(abs(self.gsp), self.frc) * math.sin(self.gsp)
         """Change Radii depending if we are in a ball or not"""
-        if self.is_ball:
-            self.height_radius = 7
-            self.width_radius = 14
-        else:
-            self.height_radius = 19
-            self.width_radius = 9
+        self.height_radius = 7 if self.is_ball else 19
+        self.width_radius = 14 if self.is_ball else 9
         self.activate_sensors()
         self.pos += pygame.Vector2(self.gsp, 0).rotate(self.ang)
         self.up = self.ang - 90
         self.rect = pygame.Rect(*self.pos, 10, 10)
-        self.rect.center = self.pos
+        self.rect.center = tuple(int(axis) for axis in self.pos)
         self.location, angle_pre_equation = curlvl.collide(self)
         self.ang = (256-angle_pre_equation)*1.40625
         while self.location == "underground":
