@@ -3,9 +3,7 @@ import math
 import random
 import functools
 import pygame
-from . import graphics
-from . import audio
-from . import files
+from . import graphics, audio, files, variables
 
 curlvl = None
 atkdur = 0
@@ -140,7 +138,15 @@ class Boss(Character):
                 elif atk['name'] == "fireto":
                     self.fire(pygame)
                 if not targetPos == None:
-                    atkdur = self.distance_to(pygame.Vector2(*targetPos)/6)
+                    atkdur = self.pos.distance_to(pygame.Vector2(*targetPos)/6)
+    def fire(self, target):
+        """This will eventually create an object"""
+        if type(target) == int:
+            """Create the projectile and send it in that direction"""
+            ...
+        elif type(target) == Character:
+            """Create the projectile and send it in the direction of the target."""
+            ...
 
     
 class Level:
