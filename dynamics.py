@@ -175,6 +175,13 @@ class Level:
         self.started = False
         del self.fgIMG, self.pixel, self.bgIMG, self.collision
     def collide(self, caller) -> tuple[str, int]:
+        """
+            This method uses a custom format using the 4 channels available
+            Red Channel: Angle for Layer A
+            Blue Channel: Angle for Layer B
+            Green Channel: Not used here, will be used for monitors and enemies once they have been coded in.
+            Alpha Channel: Same as the Green Channel.
+        """
         collision_layer = self.collision[caller.layer] if not caller.layer == 0 else self.collision[0]
         caller_pos = pygame.Vector2(int(caller.pos.x), int(caller.pos.y))
         air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.up)
