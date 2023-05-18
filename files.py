@@ -29,6 +29,7 @@ def verify_version(file, data):
     file_ver = ""
     for num in data[1:5]:
         file_ver += str(num)
+    # FIXME: I return an incorrect number
     version_to_check = int(file_ver)
     version_delta = engine_version - version_to_check
     if not version_delta == 0:

@@ -9,6 +9,8 @@ BLANK = (0,0,0,0)
 class Character(graphics.Spritesheet):
     def __init__(self, surf, characterName, cells:dict={"stand": [0,0,64,64]}, pos=()):
         super().__init__(f"Art/Characters/{characterName}/sheet.png", cells)
+        """If someone can collapse this code to improve readability please do."""
+        self.hits = 1 # How many hits the character can take before they die.
         self.surf = surf
         self.gsp = 0
         self.up = -90 # this is in degrees
@@ -75,10 +77,16 @@ class Character(graphics.Spritesheet):
         self.activate_sensors()
         self.pos += pygame.Vector2(self.gsp, 0).rotate(self.ang)
         self.up = self.ang - 90
+        # VSCode says no matching overrides on the following line.
         self.rect = pygame.Rect(*self.pos, 10, 10)
-        self.rect.center = tuple(int(axis) for axis in self.pos)
+        # I say if it ain't broke and it doesn't pose a security risk,
+        # don't fix it until you can figure out how to make it go faster.
+        self.rect.center = tuple(int(axis) for axis in self.pos) # must be tuple otherwise VSCode will yell at you.
         self.location, angle_pre_equation = curlvl.collide(self)
+        # Magic conversion number do not touch
         self.ang = (256-angle_pre_equation)*1.40625
+        # TODO: Instead of practically teleporting to the top of whatever surface you are on,
+        # Keep adding velocity to self until we are out of the wall.
         while self.location == "underground":
             self.pos += pygame.Vector2(0,-1)
             self.location, angle_pre_equation = curlvl.collide(self)
@@ -89,18 +97,20 @@ class Character(graphics.Spritesheet):
                 if self.yvel > self.top:
                     self.yvel = self.top
                 self.pos += pygame.Vector2(0, self.yvel)
+        # Should I do this?  It doesn't call self.surf.flip so it should be alright.
         self.render()
 class Boss(Character):
-    def __init__(self, surf, name, cells, hits, spawn, behaviors=()):
+    def __init__(self, surf, name, cells, spawn, hits=8, behaviors=(), on_destruct = None): # added default hits value, on_destruct is unused.
         super().__init__(surf, name, cells)
         self.spawn = spawn
-        self.htis = hits
+        self.hits = hits # TYPO fixed.
         self.behaviors = behaviors
         self.atkdur = 256
         
+        
     def update(self):
         global atkdur
-        if len(self.behaviors) >= 2:            
+        if len(self.behaviors) >= 2:
             if self.atkdur == 0:
                 targetPos = None
                 atk = random.choice(self.behaviors).lower()
@@ -119,7 +129,7 @@ class Boss(Character):
                     self.fire(180)
                     atkdur = 180
                 elif atk['name'] == "fireright":
-                    self.fire()
+                    self.fire(0)
                     atkdur = 180
                 elif atk['name'] == "firedown":
                     self.fire(90)
@@ -128,10 +138,11 @@ class Boss(Character):
                     self.fire(-90)
                     atkdur = 180
                 elif atk['name'] == "fireto":
-                    self.fire(pygame)
-                if not targetPos == None:
-                    atkdur = self.pos.distance_to(pygame.Vector2(*targetPos)/6)
-    def fire(self, target):
+                    self.fire(variables.character)
+                # if not targetPos == None:
+                #     atkdur = self.pos.distance_to(pygame.Vector2(*targetPos)/6) # Still figuring out how long this should take.
+                
+    def fire(self, target: Character | int=0):
         """This will eventually create an object"""
         if type(target) == int:
             """Create the projectile and send it in that direction"""
@@ -184,7 +195,7 @@ class Level:
         """
         collision_layer = self.collision[caller.layer] if not caller.layer == 0 else self.collision[0]
         caller_pos = pygame.Vector2(int(caller.pos.x), int(caller.pos.y))
-        air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.up)
+        air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.facing)
         self.pixel = collision_layer.get_at(caller_pos)
         air_detector = int(air_detector_base[0]), int(air_detector_base[1])
         air_pixel = collision_layer.get_at(air_detector)
