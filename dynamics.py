@@ -38,7 +38,7 @@ class Character(graphics.Spritesheet):
             self.active_sensors[4] = False
         elif self.gsp < 0:
             self.active_sensors[5] = False
-        if self.grounded:
+        if self.grounded: # type: ignore
             self.active_sensors[2:2] = [False, False]
         else:
             if self.yvel > 0:
@@ -58,8 +58,7 @@ class Character(graphics.Spritesheet):
                     self.gsp = 0.5
             elif self.gsp >= 0:
                 self.gsp += self.acc
-                if self.gsp > self.top:
-                    self.gsp = self.top
+                self.gsp = min(self.gsp, self.top)
         elif drc < 0:
             if self.gsp >= 0:
                 self.gsp -= self.dec
@@ -78,7 +77,7 @@ class Character(graphics.Spritesheet):
         self.pos += pygame.Vector2(self.gsp, 0).rotate(self.ang)
         self.up = self.ang - 90
         # VSCode says no matching overrides on the following line.
-        self.rect = pygame.Rect(*self.pos, 10, 10)
+        self.rect = pygame.Rect(*self.pos, 10, 10) # type: ignore
         # I say if it ain't broke and it doesn't pose a security risk,
         # don't fix it until you can figure out how to make it go faster.
         self.rect.center = tuple(int(axis) for axis in self.pos) # must be tuple otherwise VSCode will yell at you.
@@ -94,8 +93,7 @@ class Character(graphics.Spritesheet):
             self.grounded = self.location == "on surface"
             if not self.grounded:
                 self.yvel += grv
-                if self.yvel > self.top:
-                    self.yvel = self.top
+                self.yvel = min(self.yvel, self.top)
                 self.pos += pygame.Vector2(0, self.yvel)
         # Should I do this?  It doesn't call self.surf.flip so it should be alright.
         self.render()
@@ -157,15 +155,11 @@ class Level:
         self.surf, self.fg, self.colFiles, self.name, self.lvl_id, self.bgm, self.bg, self.x, self.y = surf, fg, colliders, name, ctypes.c_int8(lvl_id).value, bgm, bg, x, y
     def load(self):
         self.collision = {}
-        if len(self.colFiles) == 2:
-            for num, file in enumerate(self.colFiles):
-                self.collision[num] = graphics.load_image(file)
-        else:
+        if len(self.colFiles) != 2:
             raise NotImplementedError("I have yet to code in support for anything but 2 layers.")
-        if self.bg:
-            self.bgIMG = graphics.load_image(self.bg)
-        else:
-            self.bgIMG = None
+        for num, file in enumerate(self.colFiles):
+            self.collision[num] = graphics.load_image(file)
+        self.bgIMG = graphics.load_image(self.bg) if self.bg else None
         if self.bgm:
             audio.load_music(self.bgm)
         self.pixel = (0,0,0,0)
@@ -193,14 +187,18 @@ class Level:
             Green Channel: Not used here, will be used for monitors and enemies once they have been coded in.
             Alpha Channel: Same as the Green Channel.
         """
-        collision_layer = self.collision[caller.layer] if not caller.layer == 0 else self.collision[0]
+        collision_layer = (
+            self.collision[caller.layer]
+            if caller.layer != 0
+            else self.collision[0]
+        )
         caller_pos = pygame.Vector2(int(caller.pos.x), int(caller.pos.y))
         air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.facing)
         self.pixel = collision_layer.get_at(caller_pos)
         air_detector = int(air_detector_base[0]), int(air_detector_base[1])
         air_pixel = collision_layer.get_at(air_detector)
         at_surface = air_pixel == BLANK
-        grounded = not self.pixel == BLANK
+        grounded = self.pixel != BLANK
         location = "underground" if grounded and not at_surface else "on surface" if at_surface and grounded else "in air"
         return (location, self.pixel[3])
     def draw(self):

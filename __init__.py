@@ -48,21 +48,6 @@ set_state = files.set_state
 get_state = files.get_state
 Hbtns = False
 state = get_state()
-
-kdict = {
-    "up": pygame.K_w,
-    "down": pygame.K_s,
-    "left": pygame.K_a,
-    "right": pygame.K_d,
-    "jump": pygame.K_j,
-    "action": pygame.K_k,
-    "boost": pygame.K_l,
-    "esc": pygame.K_ESCAPE,
-    "dbg": pygame.K_o,
-    "rotate_left": pygame.K_LEFTBRACKET,
-    "rotate_right": pygame.K_RIGHTBRACKET
-}
-
 def ON():
     audio.ON()
     pygame.init()
@@ -70,20 +55,6 @@ def ON():
     
 def OFF():
     pygame.quit()
-
-def key_pressed(k=""):
-    keys = pygame.key.get_pressed()
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.display.quit() #Failsafe for win7x64py3.3
-            pygame.quit()
-            sys.exit()
-    if sum(keys) > 0:
-        if k.lower() in kdict:
-            return k == "" or bool(keys[kdict[k.lower()]])
-def get_mouse_pos():
-    return pygame.mouse.get_pos()
-
 
 def load_Music(file):
     pygame.mixer_music.load(file)

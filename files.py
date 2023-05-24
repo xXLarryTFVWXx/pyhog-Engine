@@ -26,19 +26,17 @@ class VersionError(Exception):
 # This is currently unused.
 def verify_version(file, data):
     """Verifies that the data's version is the same as the above Version"""
-    file_ver = ""
-    for num in data[1:5]:
-        file_ver += str(num)
+    file_ver = "".join(str(num) for num in data[1:5])
     # FIXME: I return an incorrect number
     version_to_check = int(file_ver)
     version_delta = engine_version - version_to_check
-    if not version_delta == 0:
+    if version_delta != 0:
         raise VersionError(f"Uh oh, looks like this file is {version_delta} versions behind.")
     return True
 
 def get_state() -> str:
     """Gets the current state of the game with an external file"""
-    with open(f"state.phg", "rb") as f:
+    with open("state.phg", "rb") as f:
         data = f.read()
         # if verify_version(f"state.phg", data):
         """verision verification temporarily removed"""
@@ -46,7 +44,7 @@ def get_state() -> str:
 
 def set_state(mode, ID:int) -> None:
     """Sets the current state of the game with an external file"""
-    with open(f"state.phg", "wb") as f:
+    with open("state.phg", "wb") as f:
         f.write(HEADER + bytes(f"{chr(mode)}{chr(ID)}".encode()))
         
 def save(fname, data:str):
@@ -59,5 +57,5 @@ def load(fname):
 
 
 
-if not __name__ == "__main__":
+if __name__ != "__main__":
     set_state(0, 0)

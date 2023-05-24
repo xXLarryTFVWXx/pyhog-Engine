@@ -18,7 +18,7 @@ class Character(Spritesheet):
         self.rect = pygame.Rect(self.vec, (self.width, self.height))
         self.ang = 0
         self.top = 6
-    def update(self, drc: str):
+    def update(self, drc: int):
         self.up = self.ang - 90
         if drc > 0:
             if self.gsp < 0:
@@ -27,8 +27,7 @@ class Character(Spritesheet):
                     self.gsp = 0.5
             elif self.gsp > 0:
                 self.gsp += acc
-                if self.gsp > self.top:
-                    self.gsp = self.top
+                self.gsp = min(self.gsp, self.top)
         elif drc < 0:
             if self.gsp > 0:
                 self.gsp -= dec

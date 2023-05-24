@@ -1,21 +1,11 @@
 import ctypes, math, pygame
 from . import files
 from . import audio
+from . import input
 
 menus = {
     "current": None
 }
-
-def get_mouse():
-    return pygame.Rect(pygame.mouse.get_pos(), (1,1))
-def get_click(button=0):
-    buttons = pygame.mouse.get_pressed()
-    if button == 0:
-        return bool(sum(buttons))
-    elif button in range(4):
-        return bool(buttons[button-1])
-    else:
-        raise TypeError(f"expected for button to be between 0 and 2 got: {button}")
 
 class Window:
     def __init__(self, height, width, bgcolor="black", title="pyhog-engine", fullscreen=False):
@@ -23,11 +13,11 @@ class Window:
         self.w = width
         if type(bgcolor) == str:
             self.bgcolor = pygame.Color(bgcolor)
-        elif type(bgcolor) == tuple or type(bgcolor) == list:
-            if not len(bgcolor) > 4 or not len(bgcolor) > 2:
+        elif type(bgcolor) in [tuple, list]:
+            if len(bgcolor) <= 4 or len(bgcolor) <= 2:
                 raise ValueError("The color is of the wrong size")
             else:
-                self.bgcolor == bgcolor
+                self.bgcolor = bgcolor
         self.title = title
         self.fullscreen = fullscreen
     def display(self):
@@ -46,33 +36,30 @@ class Window:
         pygame.event.clear()
 
 class Box:
-    def __init__(self, surf, pos=[0,0], width=0, height=0, **kwargs):
+    def __init__(self, surf, pos=None, width=0, height=0, **kwargs):
+        if pos is None:
+            pos = [0,0]
         self.surf = surf
-        self.pos = pos
-        if 'size' in kwargs:
-            self.size = list(kwargs["size"])
-        else:
-            self.size = [128, 64]
+        self.pos = [axis * 1.0 for axis in pos]
+        self.size = list(kwargs["size"]) if 'size' in kwargs else [128, 64]
         if 'text' in kwargs:
             self.font = pygame.font.SysFont(pygame.font.get_default_font(), 28)
             self.text = kwargs['text']
-            self.size = list(self.font.size(kwargs['text']))
-            self.size[0] += 10
-            self.size[1] += 10
+            self.size = [size + 10.0 for size in self.font.size(self.text)]
             self.rect = pygame.Rect(self.pos, self.size)
-            if not 'fgc' in kwargs:
+            if 'fgc' not in kwargs:
                 self.fgc = pygame.Color('black')
-                
+
             else:
                 self.fgc = pygame.Color(kwargs['color'])
-                
+
         if 'bgc' in kwargs:
             self.bgc = pygame.Color(kwargs['bgc'])
-            
+
         else:
             self.bgc = pygame.Color('red')
         self.hover = False
-        
+
         if 'function' in kwargs:
             self.function = kwargs['function']
             if 'hover' in kwargs:
@@ -87,24 +74,24 @@ class Box:
                     self.hbgc = pygame.Color('green')
         else:
             self.function = None
-        self.rect = pygame.Rect(self.pos, self.size)
+        self.rect = pygame.Rect(self.pos, self.size) # type: ignore
         self.hovering = False
     def draw(self):
         if self.hover:
-            self.hovering = get_mouse().colliderect(self.rect)
+            self.hovering = self.rect.collidepoint(pygame.mouse.get_pos())
         if self.hovering:
             pygame.draw.rect(self.surf, self.hbgc, self.rect)
-            if not self.text == None:
+            if self.text is not None:
                 label = self.font.render(self.text, True, self.hfgc)
                 lRect = label.get_rect()
                 lRect.center = self.rect.center
                 self.surf.blit(label, lRect)
-            if not self.function == None:
-                if get_click(0):
+            if get_click(0):
+                if self.function is not None:
                     self.function()
         else:
             pygame.draw.rect(self.surf, self.bgc, self.rect)
-        if not self.text == None:
+        if self.text is not None:
             label = self.font.render(self.text, True, self.fgc)
             lRect = label.get_rect()
             lRect.center = self.rect.center
@@ -115,22 +102,24 @@ class Menu:
             Whether there are multiple buttons or not, just use a 2d matrix (e.g. [[BUTTON_OBJ]])
             
         """
-    def __init__(self, name, mnu_id, bg="cyan", bgm=None, buttons=[[]]):
+    def __init__(self, name, mnu_id, bg="cyan", bgm=None, buttons=None):
 
+        if buttons is None:
+            buttons = [[]]
         self.btns = buttons
         if type(bg) == str:
-            if not "." in bg:
+            if "." not in bg:
                 self.bgc = pygame.Color(bg)
             else:
                 self.bgimg = bg
-        elif type(bg) == tuple or type(bg) == list:
+        elif type(bg) in [tuple, list]:
             self.bgc = bg
-        if not bgm==None:
+        if bgm is not None:
             self.bgm = bgm
         global menus, mnu
         self.mnu_ID = mnu_id
         new_id = ctypes.c_uint16(mnu_id)
-        if not new_id.value in menus:
+        if new_id.value not in menus:
             menus[new_id.value] = self
             
     def open(self):
@@ -144,10 +133,3 @@ class Menu:
             print(e)
         menus['current'] = self
         files.set_state(0x00, self.mnu_ID)
-        
-        
-    
-def openMenu(mnu_id):
-    new_id = ctypes.c_uint16(mnu_id).value
-    if new_id in menus:
-        menus[new_id].open()
