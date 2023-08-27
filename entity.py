@@ -1,5 +1,6 @@
 import math, random, pygame
 from .graphics import *
+from .CONSTANTS import *
 atkdur = 0
 
 class Character(Spritesheet):

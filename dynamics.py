@@ -7,8 +7,14 @@ grv = 0.25
 BLANK = (0,0,0,0)
 
 class Character(graphics.Spritesheet):
-    def __init__(self, surf, characterName, cells:dict={"stand": [0,0,64,64]}, pos=()):
-        super().__init__(f"Art/Characters/{characterName}/sheet.png", cells)
+    def __init__(self, surf, characterName, cells:None|dict[str, list[list[int]]]=None, pos=()):
+        """
+            cells format:
+            {
+                "name": [pygame.Rect, ...]
+            }
+        """
+        super().__init__(f"Art/Characters/{characterName}/sheet.png", cells) # type: ignore Temporarily ignoring type to get rid of red squiggly
         """If someone can collapse this code to improve readability please do."""
         self.hits = 1 # How many hits the character can take before they die.
         self.surf = surf
@@ -16,15 +22,13 @@ class Character(graphics.Spritesheet):
         self.up = -90 # this is in degrees
         self.pos = pygame.Vector2(20)
         self.xvel = self.yvel = 0
-        self.frc = self.acc = 0.046875
+        self.acc = 0.046875
         self.layer = 0
         self.rect = pygame.Rect(self.pos, (7, 9))
         self.coll_anchor = pygame.Vector2(self.rect.center)
         self.ang = 0
         self.top = 6
-        self.acc = 0.046875
         self.dec = 0.5
-        self.frc = self.acc
         self.height_radius = 19
         self.width_radius = 9
         self.loaded = False
@@ -38,13 +42,13 @@ class Character(graphics.Spritesheet):
             self.active_sensors[4] = False
         elif self.gsp < 0:
             self.active_sensors[5] = False
+
         if self.grounded: # type: ignore
             self.active_sensors[2:2] = [False, False]
+        elif self.yvel > 0:
+            self.active_sensors[2:4] = [False, False]
         else:
-            if self.yvel > 0:
-                self.active_sensors[2:4] = [False, False]
-            else:
-                self.active_sensors[0:2] = [False, False]
+            self.active_sensors[:2] = [False, False]
 
         
     def update(self, drc: int):

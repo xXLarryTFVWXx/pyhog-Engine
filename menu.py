@@ -1,18 +1,20 @@
 import math
 import pygame
-from . import audio, input
+from . import audio, input, __helpers
 from .gui import *
 
 menus = {"current": None}
+
+surface: Window
 class Menu:
     bformat =  """format for buttons
             Whether there are multiple buttons or not, just use a 2d matrix (e.g. [[BUTTON_OBJ]])
             
         """
-    def __init__(self, name, bg="cyan", bgm=None, buttons=None):
+    def __init__(self, surface, name, bg="cyan", bgm=None, buttons=None):
 
         if buttons is None:
-            buttons = Box(WIN, (20,20), 10, 10, text="Hi!")
+            buttons = Box(surface, (20,20), 10, 10, text="Hi!")
         self.btns = buttons
         if type(bg) == str:
             if "." not in bg:

@@ -3,6 +3,8 @@ from . import files
 from . import audio
 from . import input
 
+menus: dict[str | int, "Menu" | None]
+
 menus = {
     "current": None
 }
@@ -86,7 +88,7 @@ class Box:
                 lRect = label.get_rect()
                 lRect.center = self.rect.center
                 self.surf.blit(label, lRect)
-            if get_click(0):
+            if input.get_click(0):
                 if self.function is not None:
                     self.function()
         else:
