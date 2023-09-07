@@ -1,5 +1,6 @@
 import ctypes, math, random, functools, pygame
 from . import graphics, audio, files, variables
+from .CONSTANTS import *
 
 curlvl = None
 atkdur = 0
@@ -17,20 +18,19 @@ class Character(graphics.Spritesheet):
         super().__init__(f"Art/Characters/{characterName}/sheet.png", cells) # type: ignore Temporarily ignoring type to get rid of red squiggly
         """If someone can collapse this code to improve readability please do."""
         self.hits = 1 # How many hits the character can take before they die.
+        self.invulnerable: bool = False
         self.surf = surf
-        self.gsp = 0
+        self.forward_velocity = 0
         self.up = -90 # this is in degrees
-        self.pos = pygame.Vector2(20)
-        self.xvel = self.yvel = 0
-        self.acc = 0.046875
+        self.position = pygame.Vector2(20)
+        self.acc = ACCELERATION
         self.layer = 0
-        self.rect = pygame.Rect(self.pos, (7, 9))
+        self.rect = pygame.Rect(self.position, (7, 9))
         self.coll_anchor = pygame.Vector2(self.rect.center)
-        self.ang = 0
-        self.top = 6
-        self.dec = 0.5
-        self.height_radius = 19
-        self.width_radius = 9
+        self.angle = 0
+        self.top = 6 # I can't recall what this was.
+        self.dec = GROUND_FRICTION
+        self.collision_radii = [9, 19]
         self.loaded = False
         self.grounded = False
         self.is_ball = False
@@ -38,12 +38,12 @@ class Character(graphics.Spritesheet):
         self.location = "in air"
     def activate_sensors(self):
         self.active_sensors = [True for _ in range(6)]
-        if self.gsp > 0:
+        if self.forward_velocity > 0:
             self.active_sensors[4] = False
-        elif self.gsp < 0:
+        elif self.forward_velocity < 0:
             self.active_sensors[5] = False
 
-        if self.grounded: # type: ignore
+        if self.grounded:
             self.active_sensors[2:2] = [False, False]
         elif self.yvel > 0:
             self.active_sensors[2:4] = [False, False]
@@ -54,51 +54,51 @@ class Character(graphics.Spritesheet):
     def update(self, drc: int):
         if not self.loaded:
             self.load()
-        self.up = self.ang - 90
+        self.up = self.anglele - 90
         if drc > 0:
-            if self.gsp <= 0:
-                self.gsp += self.dec
-                if self.gsp >= 0:
-                    self.gsp = 0.5
-            elif self.gsp >= 0:
-                self.gsp += self.acc
-                self.gsp = min(self.gsp, self.top)
+            if self.forward_velocity <= 0:
+                self.forward_velocity += self.dec
+                if self.forward_velocity >= 0:
+                    self.forward_velocity = 0.5
+            elif self.forward_velocity >= 0:
+                self.forward_velocity += self.acc
+                self.forward_velocity = min(self.forward_velocity, self.top)
         elif drc < 0:
-            if self.gsp >= 0:
-                self.gsp -= self.dec
-                if self.gsp <= 0:
-                    self.gsp = -0.5
-            elif self.gsp <= 0:
-                self.gsp -= self.acc
-                if abs(self.gsp) > self.top:
-                    self.gsp = -self.top
+            if self.forward_velocity >= 0:
+                self.forward_velocity -= self.dec
+                if self.forward_velocity <= 0:
+                    self.forward_velocity = -0.5
+            elif self.forward_velocity <= 0:
+                self.forward_velocity -= self.acc
+                if abs(self.forward_velocity) > self.top:
+                    self.forward_velocity = -self.top
         else:
-            self.gsp -= min(abs(self.gsp), self.frc) * math.sin(self.gsp)
+            self.forward_velocity -= min(abs(self.forward_velocity), self.dec) * math.sin(self.forward_velocity)
         """Change Radii depending if we are in a ball or not"""
-        self.height_radius = 7 if self.is_ball else 19
-        self.width_radius = 14 if self.is_ball else 9
+        self.collision_radii = [14, 7] if self.is_ball else [19, 9]
         self.activate_sensors()
-        self.pos += pygame.Vector2(self.gsp, 0).rotate(self.ang)
-        self.up = self.ang - 90
+        self.position += pygame.Vector2(self.forward_velocity, 0).rotate(self.angle)
+        self.up = self.angle - 90
         # VSCode says no matching overrides on the following line.
-        self.rect = pygame.Rect(*self.pos, 10, 10) # type: ignore
+        self.rect = pygame.Rect(*self.position, 10, 10) # type: ignore
         # I say if it ain't broke and it doesn't pose a security risk,
         # don't fix it until you can figure out how to make it go faster.
-        self.rect.center = tuple(int(axis) for axis in self.pos) # must be tuple otherwise VSCode will yell at you.
+        self.rect.center = tuple(int(axis) for axis in self.position.center) # must be tuple otherwise VSCode will yell at you.
+        # It still yells at me.
         self.location, angle_pre_equation = curlvl.collide(self)
         # Magic conversion number do not touch
-        self.ang = (256-angle_pre_equation)*1.40625
+        self.angle = (256-angle_pre_equation)*1.40625
         # TODO: Instead of practically teleporting to the top of whatever surface you are on,
         # Keep adding velocity to self until we are out of the wall.
         while self.location == "underground":
-            self.pos += pygame.Vector2(0,-1)
+            self.position += pygame.Vector2(0,-1)
             self.location, angle_pre_equation = curlvl.collide(self)
         else:
             self.grounded = self.location == "on surface"
             if not self.grounded:
                 self.yvel += grv
                 self.yvel = min(self.yvel, self.top)
-                self.pos += pygame.Vector2(0, self.yvel)
+                self.position += pygame.Vector2(0, self.yvel)
         # Should I do this?  It doesn't call self.surf.flip so it should be alright.
         self.render()
 class Boss(Character):
@@ -117,14 +117,14 @@ class Boss(Character):
                 targetPos = None
                 atk = random.choice(self.behaviors).lower()
                 if atk['name'] == "moveleft":
-                    distance = self.pos.distance_to(pygame.Vector2(-150,self.y))
+                    distance = self.position.distance_to(pygame.Vector2(-150,self.y))
                 elif atk['name'] == "moveright":
-                    distance = self.pos.distance_to(pygame.Vector2(self.surf.width + 150, self.y))
+                    distance = self.position.distance_to(pygame.Vector2(self.surf.width + 150, self.y))
                 elif atk['name'] == "movedown":
                     self.targetPos = self.x, self.surf.height+150
-                    distance = self.pos.distance_to(pygame.Vector2(self.x, self.surf.height+150))
+                    distance = self.position.distance_to(pygame.Vector2(self.x, self.surf.height+150))
                 elif atk['name'] == "moveup":
-                    distance = self.pos.distance_to(pygame.Vector2(self.x, -150))
+                    distance = self.position.distance_to(pygame.Vector2(self.x, -150))
                 elif atk['name'] == "hover":
                     atkdur = 120
                 elif atk['name'] == "fireleft":
@@ -142,7 +142,7 @@ class Boss(Character):
                 elif atk['name'] == "fireto":
                     self.fire(variables.character)
                 # if not targetPos == None:
-                #     atkdur = self.pos.distance_to(pygame.Vector2(*targetPos)/6) # Still figuring out how long this should take.
+                #     atkdur = self.position.distance_to(pygame.Vector2(*targetPos)/6) # Still figuring out how long this should take.
                 
     def fire(self, target: Character | int=0):
         """This will eventually create an object"""
@@ -188,8 +188,8 @@ class Level:
             This method uses a custom format using the 4 channels available
             Red Channel: Angle for Layer A
             Blue Channel: Angle for Layer B
-            Green Channel: Not used here, will be used for monitors and enemies once they have been coded in.
-            Alpha Channel: Same as the Green Channel.
+            Green Channel: Used for Object Classification
+            Alpha Channel: Used for Object Identifier
         """
         collision_layer = (
             self.collision[caller.layer]
