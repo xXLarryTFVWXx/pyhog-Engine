@@ -3,8 +3,6 @@ from . import files
 from . import audio
 from . import input
 
-menus: dict[str | int, "Menu" | None]
-
 menus = {
     "current": None
 }
@@ -134,3 +132,7 @@ class Menu:
             print(e)
         menus['current'] = self
         files.set_state(0x00, self.mnu_ID)
+
+def openMenu(menu_id=0):
+    new_id = ctypes.c_uint16(menu_id)
+    menus[new_id.value].open()

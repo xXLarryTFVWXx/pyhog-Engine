@@ -20,7 +20,7 @@ class Character(graphics.Spritesheet):
         self.hits = 1 # How many hits the character can take before they die.
         self.invulnerable: bool = False
         self.surf = surf
-        self.forward_velocity = 0
+        self.forward_velocity = self.xvel = self.yvel = 0
         self.up = -90 # this is in degrees
         self.position = pygame.Vector2(20)
         self.acc = ACCELERATION
@@ -83,7 +83,7 @@ class Character(graphics.Spritesheet):
         self.rect = pygame.Rect(*self.position, 10, 10) # type: ignore
         # I say if it ain't broke and it doesn't pose a security risk,
         # don't fix it until you can figure out how to make it go faster.
-        self.rect.center = tuple(int(axis) for axis in self.position.center) # must be tuple otherwise VSCode will yell at you.
+        self.rect.center = tuple(int(axis) for axis in self.position.xy) # must be tuple otherwise VSCode will yell at you.
         # It still yells at me.
         self.location, angle_pre_equation = curlvl.collide(self)
         # Magic conversion number do not touch
@@ -196,9 +196,9 @@ class Level:
             if caller.layer != 0
             else self.collision[0]
         )
-        caller_pos = pygame.Vector2(int(caller.pos.x), int(caller.pos.y))
-        air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.facing)
-        self.pixel = collision_layer.get_at(caller_pos)
+        caller_pos = pygame.Vector2(int(caller.position.x), int(caller.position.y))
+        air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.angle)
+        self.pixel = collision_layer.get_at([int(axis) for axis in caller_pos.xy])
         air_detector = int(air_detector_base[0]), int(air_detector_base[1])
         air_pixel = collision_layer.get_at(air_detector)
         at_surface = air_pixel == BLANK

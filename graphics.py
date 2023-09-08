@@ -22,7 +22,7 @@ class Spritesheet:
                 self.frame = 0
         self.cycleTimer -= 1
     def render(self):
-        self.surf.blit(self.sheet, (self.pos.x, self.pos.y), self.cells[self.cycle][self.frame])
+        self.surf.blit(self.sheet, (self.position.x, self.position.y), self.cells[self.cycle][self.frame])
         self.nextFrame()
 
 imgext = ["png", "jpeg", "jpg", "jpe", "jfif", "bmp", "gif", "dip", "tiff", "tif", "heic"]
@@ -36,8 +36,8 @@ def load_image(filename=None, convert=True):
         image = pygame.image.load(os.path.join(filename))
         if convert:
             image = image.convert_alpha()
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Please ensure the file at {filename} exists")
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"Please ensure the file at {filename} exists") from e
     return image
 
 def get_palette(image):
