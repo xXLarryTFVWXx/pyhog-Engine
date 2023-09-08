@@ -88,9 +88,8 @@ class Box:
                 lRect = label.get_rect()
                 lRect.center = self.rect.center
                 self.surf.blit(label, lRect)
-            if input.get_click(0):
-                if self.function is not None:
-                    self.function()
+            if input.get_click(0) and self.function is not None:
+                self.function()
         else:
             pygame.draw.rect(self.surf, self.bgc, self.rect)
         if self.text is not None:
@@ -107,7 +106,7 @@ class Menu:
     def __init__(self, name, mnu_id, bg="cyan", bgm=None, buttons=None):
 
         if buttons is None:
-            buttons = [[]]
+            buttons = [[Box(surface, (20,20), 10, 10, text="Hi!")]]
         self.btns = buttons
         if type(bg) == str:
             if "." not in bg:

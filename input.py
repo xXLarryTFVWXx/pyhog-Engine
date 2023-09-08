@@ -1,4 +1,4 @@
-import sys, pygame, pyjoycon as pyjc
+import sys, pygame#, pyjoycon as pyjc
 
 kdict = {
     "up": pygame.K_w,
@@ -21,20 +21,18 @@ def key_pressed(k=""):
             pygame.display.quit() #Failsafe for win7x64py3.3
             pygame.quit()
             sys.exit()
-    if sum(keys) > 0:
-        if k.lower() in kdict:
-            return k == "" or bool(keys[kdict[k.lower()]])
-
+    if any(keys):
+        return bool(keys[kdict[k.lower()]]) if k.lower() in kdict else False
+"""
 class JoyControllerSingle(pyjc.GyroTrackingJoyCon,pyjc.PythonicJoyCon):
     def update(self):
         if self.battery_level < 2:
             print("Battery is low")
+"""
 
-def get_click(button=0, sprite=None):
-    buttons = pygame.mouse.get_pressed(3)
-    if button == 0:
-        return bool(sum(buttons))
-    elif button in range(4):
-        return bool(buttons[button-1])
-    else:
-        raise TypeError(f"expected for button to be between 0 and 2 got: {button}")
+
+def get_click(button=0):
+    buttons = pygame.mouse.get_pressed(5)
+    if button not in range(4):
+        raise ValueError(f"button must be in a range of 0 to 5 inclusive, currently {button=}")
+    return bool(sum(buttons)) if button == 0 else bool(buttons[button-1])

@@ -28,7 +28,7 @@ class Character(graphics.Spritesheet):
         self.rect = pygame.Rect(self.position, (7, 9))
         self.coll_anchor = pygame.Vector2(self.rect.center)
         self.angle = 0
-        self.top = 6 # I can't recall what this was.
+        self.top_speed = 6
         self.dec = GROUND_FRICTION
         self.collision_radii = [9, 19]
         self.loaded = False
@@ -54,7 +54,7 @@ class Character(graphics.Spritesheet):
     def update(self, drc: int):
         if not self.loaded:
             self.load()
-        self.up = self.anglele - 90
+        self.up = self.angle - 90
         if drc > 0:
             if self.forward_velocity <= 0:
                 self.forward_velocity += self.dec
@@ -62,7 +62,7 @@ class Character(graphics.Spritesheet):
                     self.forward_velocity = 0.5
             elif self.forward_velocity >= 0:
                 self.forward_velocity += self.acc
-                self.forward_velocity = min(self.forward_velocity, self.top)
+                self.forward_velocity = min(self.forward_velocity, self.top_speed)
         elif drc < 0:
             if self.forward_velocity >= 0:
                 self.forward_velocity -= self.dec
@@ -70,8 +70,8 @@ class Character(graphics.Spritesheet):
                     self.forward_velocity = -0.5
             elif self.forward_velocity <= 0:
                 self.forward_velocity -= self.acc
-                if abs(self.forward_velocity) > self.top:
-                    self.forward_velocity = -self.top
+                if abs(self.forward_velocity) > self.top_speed:
+                    self.forward_velocity = -self.top_speed
         else:
             self.forward_velocity -= min(abs(self.forward_velocity), self.dec) * math.sin(self.forward_velocity)
         """Change Radii depending if we are in a ball or not"""
@@ -97,7 +97,7 @@ class Character(graphics.Spritesheet):
             self.grounded = self.location == "on surface"
             if not self.grounded:
                 self.yvel += grv
-                self.yvel = min(self.yvel, self.top)
+                self.yvel = min(self.yvel, self.top_speed)
                 self.position += pygame.Vector2(0, self.yvel)
         # Should I do this?  It doesn't call self.surf.flip so it should be alright.
         self.render()

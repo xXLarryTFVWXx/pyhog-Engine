@@ -14,7 +14,7 @@ class Menu:
     def __init__(self, surface, name, bg="cyan", bgm=None, buttons=None):
 
         if buttons is None:
-            buttons = Box(surface, (20,20), 10, 10, text="Hi!")
+            buttons = [Box(surface, (20,20), 10, 10, text="Hi!")]
         self.btns = buttons
         if type(bg) == str:
             if "." not in bg:
