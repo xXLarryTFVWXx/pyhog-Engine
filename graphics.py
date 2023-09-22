@@ -22,7 +22,7 @@ class Spritesheet:
                 self.frame = 0
         self.cycleTimer -= 1
     def render(self):
-        self.surf.blit(self.sheet, (self.position.x, self.position.y), self.cells[self.cycle][self.frame])
+        self.surf.blit(self.sheet, (self.position.x, self.position.y), self.cells[self.cycle][self.frame]) # type: ignore
         self.nextFrame()
 
 imgext = ["png", "jpeg", "jpg", "jpe", "jfif", "bmp", "gif", "dip", "tiff", "tif", "heic"]
