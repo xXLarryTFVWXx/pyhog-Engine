@@ -83,7 +83,7 @@ class Character(graphics.Spritesheet):
         self.rect = pygame.Rect(*self.position, 10, 10) # type: ignore
         # I say if it ain't broke and it doesn't pose a security risk,
         # don't fix it until you can figure out how to make it go faster.
-        self.rect.center = tuple(int(axis) for axis in self.position.xy) # must be tuple otherwise VSCode will yell at you.
+        self.rect.center = tuple(int(axis) for axis in self.position.xy) # type: ignore must be tuple otherwise VSCode will yell at you.
         # It still yells at me.
         self.location, angle_pre_equation = curlvl.collide(self)
         # Magic conversion number do not touch
