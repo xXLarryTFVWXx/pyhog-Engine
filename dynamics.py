@@ -1,4 +1,4 @@
-import ctypes, math, random, functools, pygame
+import ctypes, math, random, functools, pygame, json
 from . import graphics, audio, files, variables
 from .CONSTANTS import *
 
@@ -15,9 +15,13 @@ class Character(graphics.Spritesheet):
                 "name": [pygame.Rect, ...]
             }
         """
-        super().__init__(f"Art/Characters/{characterName}/sheet.png", cells) # type: ignore Temporarily ignoring type to get rid of red squiggly
+        self.name = characterName
+        super().__init__(f"Art/Characters/{self.name}/sheet.png", cells) # type: ignore Temporarily ignoring type to get rid of red squiggly
         """If someone can collapse this code to improve readability please do."""
         self.hits = 1 # How many hits the character can take before they die.
+        self.config = {}
+        self.config_path = f"config/Characters/{self.name}/config.json"
+        self.load_config()
         self.invulnerable: bool = False
         self.surf = surf
         self.forward_velocity = self.xvel = self.yvel = 0
@@ -49,7 +53,9 @@ class Character(graphics.Spritesheet):
             self.active_sensors[2:4] = [False, False]
         else:
             self.active_sensors[:2] = [False, False]
-
+    def load_config(self):
+        with open(self.config_path, mode="r") as config_file: 
+            self.config = json.load(config_file)
         
     def update(self, drc: int):
         if not self.loaded:
