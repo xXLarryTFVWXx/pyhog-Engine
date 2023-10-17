@@ -1,4 +1,6 @@
-import math, random, pygame
+#! This file has been deprecated, please use dynamics.py
+
+import math, random, pygame, json
 from .graphics import *
 from .CONSTANTS import *
 atkdur = 0
@@ -7,20 +9,25 @@ class Character(Spritesheet):
     def __init__(self, pos, surf, characterName, cells:dict={"stand": [0,0,64,64]}):
         super().__init__( f"Art/Characters/{characterName}/sheet.png", cells)
         self.surf = surf
+        self.name = characterName
         self.gsp = 0
         self.up = -90 # this is in degrees
-        self.x = self.y = 20
-        self.width = 7*2+1
-        self.height = 9*2+1
-        self.vec = pygame.Vector2((self.x, self.y))
-        self.xvel = self.yvel = 0
+        self.x = self.y = pos
+        self.config: dict = {}
+        self.load_config()
+        self.width, self.height = self.config.get("dimensions")
+        self.postion = pygame.Vector2((self.x, self.y))
+        self.velocity = pygame.Vector2()
         self.frc = self.acc = 0.046875
         self.layer = 0
         self.rect = pygame.Rect(self.vec, (self.width, self.height))
         self.ang = 0
         self.top = 6
-    def update(self, drc: int):
+    def load_config(self):
+        self.config = json.load(f'configs/character/{self.name}.json')
+    def update(self, direction: int):
         self.up = self.ang - 90
+        self.velocity += self.config.get("acceleration") * direction if 
         if drc > 0:
             if self.gsp < 0:
                 self.gsp += dec

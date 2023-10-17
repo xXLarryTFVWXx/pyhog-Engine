@@ -85,14 +85,14 @@ class Character(graphics.Spritesheet):
         # don't fix it until you can figure out how to make it go faster.
         self.rect.center = tuple(int(axis) for axis in self.position.xy) # type: ignore must be tuple otherwise VSCode will yell at you.
         # It still yells at me.
-        self.location, angle_pre_equation = curlvl.collide(self)
+        self.location, angle_pre_equation = curlvl.collide(self) # type: ignore
         # Magic conversion number do not touch
         self.angle = (256-angle_pre_equation)*1.40625
         # TODO: Instead of practically teleporting to the top of whatever surface you are on,
         # Keep adding velocity to self until we are out of the wall.
         while self.location == "underground":
             self.position += pygame.Vector2(0,-1)
-            self.location, angle_pre_equation = curlvl.collide(self)
+            self.location, angle_pre_equation = curlvl.collide(self) # type: ignore
         else:
             self.grounded = self.location == "on surface"
             if not self.grounded:
@@ -140,7 +140,7 @@ class Boss(Character):
                     self.fire(-90)
                     atkdur = 180
                 elif atk['name'] == "fireto":
-                    self.fire(variables.character)
+                    self.fire(variables.character) # type: ignore
                 # if not targetPos == None:
                 #     atkdur = self.position.distance_to(pygame.Vector2(*targetPos)/6) # Still figuring out how long this should take.
                 
