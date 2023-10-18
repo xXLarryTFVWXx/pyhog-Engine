@@ -44,10 +44,10 @@ from . import gui
 from . import audio
 from . import math
 github = "xxlarytfvwxx"
-set_state = files.set_state
-get_state = files.get_state
+# set_state = files.set_state
+# get_state = files.get_state
 Hbtns = False
-state = get_state()
+# state = get_state()
 def ON():
     audio.ON()
     pygame.init()
