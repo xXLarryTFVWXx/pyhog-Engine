@@ -105,6 +105,14 @@ class Character(graphics.Spritesheet):
                 self.position += pygame.Vector2(0, self.yvel)
         # Should I do this?  It doesn't call self.surf.flip so it should be alright.
         self.render()
+
+def make_projectile(starting_position, angle, velocity, hurt_player=True):
+    variables.projectiles.append({
+        "position": starting_position,
+        "angle": angle,
+        "velocity": velocity,
+        "hurts player": hurt_player
+    })
 class Boss(Character):
     def __init__(self, surf, name, cells, spawn, hits=8, behaviors=(), on_destruct = None): # added default hits value, on_destruct is unused.
         super().__init__(surf, name, cells)
@@ -112,8 +120,6 @@ class Boss(Character):
         self.hits = hits # TYPO fixed.
         self.behaviors = behaviors
         self.atkdur = 256
-        
-        
     def update(self):
         global atkdur
         if len(self.behaviors) >= 2:
@@ -148,14 +154,21 @@ class Boss(Character):
                 # if not targetPos == None:
                 #     atkdur = self.position.distance_to(pygame.Vector2(*targetPos)/6) # Still figuring out how long this should take.
                 
-    def fire(self, target: Character | int=0):
+    def fire(self, target: Character | float | int=0):
         """This will eventually create an object"""
-        if type(target) == int:
-            """Create the projectile and send it in that direction"""
-            ...
-        elif type(target) == Character:
+        if not isinstance(target, (Character, float, int)):
+            raise TypeError("Target of Boss must be either an int or a Character.")
+        position = self.position
+        angle = 0
+        attack_speed = 60
+        if isinstance(target, Character):
+            angle = self.position.angle_to(target.position)
             """Create the projectile and send it in the direction of the target."""
-            ...
+        if isinstance(target, float):
+            angle = int(target)
+        
+        make_projectile(self.position, angle, attack_speed)
+        
 
     
 class Level:
