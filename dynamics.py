@@ -10,7 +10,7 @@ grv = 0.25
 BLANK = (0,0,0,0)
 
 class Character(graphics.Spritesheet):
-    def __init__(self, surf, characterName, cells:None|dict[str, list[list[int]]]=None, pos=()):
+    def __init__(self, surf, characterName, cells:None|dict[str, list[list[int]]]=None, pos:pygame.Vector2=pygame.Vector2(0)):
         """
             cells format:
             {
