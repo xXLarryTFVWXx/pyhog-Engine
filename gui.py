@@ -3,9 +3,7 @@ from . import files
 from . import audio
 from . import input
 
-menus = {
-    "current": None
-}
+menus = {}
 
 class Window:
     def __init__(self, height, width, bgcolor="black", title="pyhog-engine", fullscreen=False):
@@ -101,7 +99,7 @@ class Menu:
             Whether there are multiple buttons or not, just use a 2d matrix (e.g. [[BUTTON_OBJ]])
             
         """
-    def __init__(self, name, mnu_id, bg="cyan", bgm=None, buttons=None):
+    def __init__(self, surface, name, mnu_id, bg="cyan", bgm=None, buttons=None):
 
         if buttons is None:
             buttons = [[Box(surface, (20,20), 10, 10, text="Hi!")]]
@@ -119,7 +117,7 @@ class Menu:
         self.mnu_ID = mnu_id
         new_id = ctypes.c_uint16(mnu_id)
         if new_id.value not in menus:
-            menus[new_id.value] = self
+            menus[f"{new_id.value}"] = self
             
     def open(self):
         try:

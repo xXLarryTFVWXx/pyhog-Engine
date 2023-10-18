@@ -2,6 +2,8 @@ import ctypes, math, random, functools, pygame, json
 from . import graphics, audio, files, variables
 from .CONSTANTS import *
 
+BASE_CONFIG_PATH = "config/Characters"
+
 curlvl = None
 atkdur = 0
 grv = 0.25
@@ -18,22 +20,18 @@ class Character(graphics.Spritesheet):
         self.name = characterName
         super().__init__(f"Art/Characters/{self.name}/sheet.png", cells) # type: ignore Temporarily ignoring type to get rid of red squiggly
         """If someone can collapse this code to improve readability please do."""
-        self.hits = 1 # How many hits the character can take before they die.
         self.config = {}
-        self.config_path = f"config/Characters/{self.name}/config.json"
+        self.config_path = f"{BASE_CONFIG_PATH}/{self.name}-config.json"
         self.load_config()
         self.invulnerable: bool = False
         self.surf = surf
         self.forward_velocity = self.xvel = self.yvel = 0
         self.up = -90 # this is in degrees
         self.position = pygame.Vector2(20)
-        self.acc = ACCELERATION
         self.layer = 0
         self.rect = pygame.Rect(self.position, (7, 9))
         self.coll_anchor = pygame.Vector2(self.rect.center)
         self.angle = 0
-        self.top_speed = 6
-        self.dec = GROUND_FRICTION
         self.collision_radii = [9, 19]
         self.loaded = False
         self.grounded = False
@@ -57,29 +55,29 @@ class Character(graphics.Spritesheet):
         with open(self.config_path, mode="r") as config_file: 
             self.config = json.load(config_file)
         
-    def update(self, drc: int):
+    def update(self, drc: int, delta_time:float):
         if not self.loaded:
             self.load()
         self.up = self.angle - 90
         if drc > 0:
             if self.forward_velocity <= 0:
-                self.forward_velocity += self.dec
+                self.forward_velocity += GROUND_FRICTION
                 if self.forward_velocity >= 0:
                     self.forward_velocity = 0.5
             elif self.forward_velocity >= 0:
-                self.forward_velocity += self.acc
-                self.forward_velocity = min(self.forward_velocity, self.top_speed)
+                self.forward_velocity += self.config.get("acceleration", ACCELERATION)
+                self.forward_velocity = min(self.forward_velocity, self.config.get("top speed", 6))
         elif drc < 0:
             if self.forward_velocity >= 0:
-                self.forward_velocity -= self.dec
+                self.forward_velocity -= GROUND_FRICTION
                 if self.forward_velocity <= 0:
                     self.forward_velocity = -0.5
             elif self.forward_velocity <= 0:
-                self.forward_velocity -= self.acc
-                if abs(self.forward_velocity) > self.top_speed:
-                    self.forward_velocity = -self.top_speed
+                self.forward_velocity -= self.config.get("acceleration", ACCELERATION)
+                if abs(self.forward_velocity) > self.config.get("top speed", 6):
+                    self.forward_velocity = -self.config.get("top speed", 6)
         else:
-            self.forward_velocity -= min(abs(self.forward_velocity), self.dec) * math.sin(self.forward_velocity)
+            self.forward_velocity -= min(abs(self.forward_velocity), GROUND_FRICTION) * math.sin(self.forward_velocity) * delta_time
         """Change Radii depending if we are in a ball or not"""
         self.collision_radii = [14, 7] if self.is_ball else [19, 9]
         self.activate_sensors()
@@ -103,7 +101,7 @@ class Character(graphics.Spritesheet):
             self.grounded = self.location == "on surface"
             if not self.grounded:
                 self.yvel += grv
-                self.yvel = min(self.yvel, self.top_speed)
+                self.yvel = min(self.yvel, self.config.get("top speed", 6))
                 self.position += pygame.Vector2(0, self.yvel)
         # Should I do this?  It doesn't call self.surf.flip so it should be alright.
         self.render()
