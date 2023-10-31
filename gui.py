@@ -99,8 +99,21 @@ class Menu:
             Whether there are multiple buttons or not, just use a 2d matrix (e.g. [[BUTTON_OBJ]])
             
         """
-    def __init__(self, surface, name, mnu_id, bg="cyan", bgm=None, buttons=None):
+    def __init__(self, surface, name, bg="cyan", bgm=None, buttons=None):
+        """
+        Initializes a Menu instance.
 
+        Args:
+            surface (object): The surface object.
+            name (str): The name of the menu.
+            mnu_id (int): The menu ID.
+            bg (str or tuple or list, optional): The background color or image filepath. Defaults to "cyan".
+            bgm (object, optional): The background music filepath. Defaults to None.
+            buttons (list, optional): The list of buttons. Defaults to None.
+
+        Returns:
+            None
+        """
         if buttons is None:
             buttons = [[Box(surface, (20,20), 10, 10, text="Hi!")]]
         self.btns = buttons
@@ -113,12 +126,7 @@ class Menu:
             self.bgc = bg
         if bgm is not None:
             self.bgm = bgm
-        global menus, mnu
-        self.mnu_ID = mnu_id
-        new_id = ctypes.c_uint16(mnu_id)
-        if new_id.value not in menus:
-            menus[f"{new_id.value}"] = self
-            
+        menus.update({name: self})
     def open(self):
         try:
             audio.load_music(self.bgm)
@@ -129,8 +137,3 @@ class Menu:
         except Exception as e:
             print(e)
         menus['current'] = self
-        files.set_state(0x00, self.mnu_ID)
-
-def openMenu(menu_id=0):
-    new_id = ctypes.c_uint16(menu_id)
-    menus[new_id.value].open()
