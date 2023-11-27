@@ -1,7 +1,6 @@
 import ctypes, math, pygame
-from . import files
-from . import audio
-from . import input
+
+from . import state, files, audio, input
 
 menus = {}
 
@@ -50,12 +49,14 @@ class Box:
 
             else:
                 self.fgc = pygame.Color(kwargs['color'])
+            self.base_text_color = self.fgc
 
         if 'bgc' in kwargs:
             self.bgc = pygame.Color(kwargs['bgc'])
 
         else:
             self.bgc = pygame.Color('red')
+        self.base_background_color = self.bgc
         self.hover = False
 
         if 'function' in kwargs:
@@ -78,21 +79,19 @@ class Box:
         if self.hover:
             self.hovering = self.rect.collidepoint(pygame.mouse.get_pos())
         if self.hovering:
-            pygame.draw.rect(self.surf, self.hbgc, self.rect)
-            if self.text is not None:
-                label = self.font.render(self.text, True, self.hfgc)
-                lRect = label.get_rect()
-                lRect.center = self.rect.center
-                self.surf.blit(label, lRect)
-            if input.get_click(0) and self.function is not None:
-                self.function()
+            self.bgc = self.hbgc
+            self.fgc = self.hfgc
         else:
-            pygame.draw.rect(self.surf, self.bgc, self.rect)
+            self.bgc = self.base_background_color
+            self.fgc = self.base_text_color
+        pygame.draw.rect(self.surf, self.hbgc, self.rect)
         if self.text is not None:
             label = self.font.render(self.text, True, self.fgc)
             lRect = label.get_rect()
             lRect.center = self.rect.center
             self.surf.blit(label, lRect)
+        if input.get_click(0) and self.function is not None:
+            self.function()
 
 class Menu:
     bformat =  """format for buttons
@@ -110,13 +109,11 @@ class Menu:
             bg (str or tuple or list, optional): The background color or image filepath. Defaults to "cyan".
             bgm (object, optional): The background music filepath. Defaults to None.
             buttons (list, optional): The list of buttons. Defaults to None.
-
-        Returns:
-            None
         """
+        self.name = name
         if buttons is None:
             buttons = [[Box(surface, (20,20), 10, 10, text="Hi!")]]
-        self.btns = buttons
+        self.buttons = buttons
         if type(bg) == str:
             if "." not in bg:
                 self.bgc = pygame.Color(bg)
@@ -126,7 +123,10 @@ class Menu:
             self.bgc = bg
         if bgm is not None:
             self.bgm = bgm
-        menus.update({name: self})
+        menu_number = len(menus.keys())
+        print(menu_number)
+        menus.update({menu_number: self})
+        state.create("menu", menu_name=f"menu-"+self.name)
     def open(self):
         try:
             audio.load_music(self.bgm)
@@ -136,4 +136,13 @@ class Menu:
             print("there is no music")
         except Exception as e:
             print(e)
-        menus['current'] = self
+        menus.update({"current": self})
+        state.set_state(self.name)
+    def render(self):
+        for row in self.buttons:
+            for button in row:
+                button.draw()
+
+
+def open_menu(menu_number: ctypes.c_uint8):
+    menus[menu_number].open()
