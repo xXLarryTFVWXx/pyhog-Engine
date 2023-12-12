@@ -1,10 +1,11 @@
 import ctypes, pygame
-from . import graphics, audio, input
+from . import graphics, audio, input, state
 from .CONSTANTS import *
 
 class Level:
     def __init__(self, surf, fg, colliders, name, lvl_id=1, bgm=None, bg=None, x=0, y=0):
         self.surf, self.fg, self.colFiles, self.name, self.lvl_id, self.bgm, self.bg, self.x, self.y = surf, fg, colliders, name, ctypes.c_int8(lvl_id).value, bgm, bg, x, y
+        state.create(f"level-{self.name}-{self.lvl_id}")
     def load(self):
         self.collision = {}
         if len(self.colFiles) != 2:
@@ -56,5 +57,9 @@ class Level:
         if self.bgIMG:
             self.surf.blit(self.bgIMG, (self.x, 0))
         self.surf.blit(self.fgIMG, (self.x, self.y))
+
+def create_level(name):
+    state.create(f"level-{name}", level_name=name)
+
 
 curlvl: Level

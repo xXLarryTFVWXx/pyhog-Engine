@@ -8,13 +8,14 @@ states = {
 }
 
 def query():
-    return states["current"]
+    return states.get(states.get("current", None), None)
 
 def create(name: str, **information):
     states[name] = information
+    print(states[name])
 
 def set_state(name):
-    states['current'] = states[name]
+    states['current'] = name
 
 def end():
     state = query()

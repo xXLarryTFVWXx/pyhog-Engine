@@ -114,6 +114,7 @@ class Menu:
         if buttons is None:
             buttons = [[Box(surface, (20,20), 10, 10, text="Hi!")]]
         self.buttons = buttons
+        self.background = pygame.Color(bg) if type(bg) == str and "." not in bg else bg if type(bg) in [tuple, list] else bg
         if type(bg) == str:
             if "." not in bg:
                 self.bgc = pygame.Color(bg)
@@ -126,7 +127,7 @@ class Menu:
         menu_number = len(menus.keys())
         print(menu_number)
         menus.update({menu_number: self})
-        state.create("menu", menu_name=f"menu-"+self.name)
+        state.create(f"menu-{self.name}", buttons=self.buttons)
     def open(self):
         try:
             audio.load_music(self.bgm)
@@ -137,12 +138,14 @@ class Menu:
         except Exception as e:
             print(e)
         menus.update({"current": self})
-        state.set_state(self.name)
-    def render(self):
+        state.set_state(f"menu-{self.name}")
+    def draw(self):
         for row in self.buttons:
             for button in row:
                 button.draw()
 
+def create_menu(name, bg="cyan", bgm=None, buttons=None):
+    menus.update({name: Menu(pygame.display.get_surface(), name, bg, bgm, buttons)})
 
 def open_menu(menu_number: ctypes.c_uint8):
     menus[menu_number].open()
