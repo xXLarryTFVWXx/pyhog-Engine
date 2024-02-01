@@ -15,12 +15,13 @@ kdict = {
 }
 
 def key_pressed(k=""):
-    keys = pygame.key.get_pressed()
+    keys = pygame.key.get_just_pressed()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.display.quit() #Failsafe for win7x64py3.3
             pygame.quit()
             sys.exit()
+    print(keys)
     if any(keys):
         return bool(keys[kdict[k.lower()]]) if k.lower() in kdict else False
 """

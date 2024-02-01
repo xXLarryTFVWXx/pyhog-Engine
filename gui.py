@@ -58,7 +58,7 @@ class Box:
             self.bgc = pygame.Color('red')
         self.base_background_color = self.bgc
         self.hover = False
-
+        self.has_click = 'function' in kwargs
         if 'function' in kwargs:
             self.function = kwargs['function']
             if 'hover' in kwargs:
@@ -75,22 +75,19 @@ class Box:
             self.function = None
         self.rect = pygame.Rect(self.pos, self.size) # type: ignore
         self.hovering = False
+    def update(self):
+        self.hovering = self.rect.collidepoint(pygame.mouse.get_pos())
+        self.clicked = self.hovering and input.get_click(0)
     def draw(self):
-        if self.hover:
-            self.hovering = self.rect.collidepoint(pygame.mouse.get_pos())
-        if self.hovering:
-            self.bgc = self.hbgc
-            self.fgc = self.hfgc
-        else:
-            self.bgc = self.base_background_color
-            self.fgc = self.base_text_color
-        pygame.draw.rect(self.surf, self.hbgc, self.rect)
+        self.bgc = self.hbgc if self.hovering else self.base_background_color
+        self.fgc = self.fbgc if self.hovering else self.base_text_color
+        pygame.draw.rect(self.surf, self.bgc, self.rect)
         if self.text is not None:
             label = self.font.render(self.text, True, self.fgc)
             lRect = label.get_rect()
             lRect.center = self.rect.center
             self.surf.blit(label, lRect)
-        if input.get_click(0) and self.function is not None:
+        if self.has_click and self.clicked():
             self.function()
 
 class Menu:
