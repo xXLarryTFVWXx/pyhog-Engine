@@ -37,21 +37,12 @@
             
 """
 import os, sys, math, functools, pygame
-from . import graphics
-from . import dynamics
-from . import files
-from . import gui
-from . import audio
-from . import math
+from . import CONSTANTS, dynamics, audio, state, level_handler, files, graphics, gui, input, variables, events
 github = "xxlarytfvwxx"
-# set_state = files.set_state
-# get_state = files.get_state
 Hbtns = False
-# state = get_state()
 def ON():
     audio.ON()
     pygame.init()
-    files.set_state(0x00, 0x00)
     
 def OFF():
     pygame.quit()

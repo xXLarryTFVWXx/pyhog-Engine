@@ -1,9 +1,11 @@
-import ctypes, math, pygame
-from . import files
-from . import audio
-from . import input
+import os, sys, ctypes, math, json, pygame
+from re import S
+from . import state, files, audio, input, variables, errors
 
 menus = {}
+
+def display_is_ready():
+    return variables.display is not None
 
 class Window:
     def __init__(self, height, width, bgcolor="black", title="pyhog-engine", fullscreen=False):
@@ -34,76 +36,78 @@ class Window:
         pygame.event.clear()
 
 class Box:
-    def __init__(self, surf, pos=None, width=0, height=0, **kwargs):
-        if pos is None:
-            pos = [0,0]
-        self.surf = surf
-        self.pos = [axis * 1.0 for axis in pos]
+    def __init__(self, config_file: None | str=None, pos: pygame.Vector2 = None, width=0, height=0, **kwargs):
+        if type(config_file) == str and config_file[-4:].lower() == 'json':
+            if os.path.isfile(config_file):
+                self.config_file = config_file
+                self.is_ready = False
+                self.config = object()
+                return
+        self.position = pos if pos else pygame.Vector2(0, 0)
+        self.surface: pygame.Surface = variables.display
         self.size = list(kwargs["size"]) if 'size' in kwargs else [128, 64]
+        self.rect = pygame.Rect(self.pos, self.size)
         if 'text' in kwargs:
             self.font = pygame.font.SysFont(pygame.font.get_default_font(), 28)
             self.text = kwargs['text']
             self.size = [size + 10.0 for size in self.font.size(self.text)]
-            self.rect = pygame.Rect(self.pos, self.size)
-            if 'fgc' not in kwargs:
-                self.fgc = pygame.Color('black')
-
-            else:
-                self.fgc = pygame.Color(kwargs['color'])
-
-        if 'bgc' in kwargs:
-            self.bgc = pygame.Color(kwargs['bgc'])
-
-        else:
-            self.bgc = pygame.Color('red')
-        self.hover = False
-
-        if 'function' in kwargs:
-            self.function = kwargs['function']
-            if 'hover' in kwargs:
-                self.hover = True
-                if 'hfgc' in kwargs:
-                    self.hfgc = pygame.Color(kwargs['hfgc'])
-                else:
-                    self.hfgc = pygame.Color('white')
-                if 'hbgc' in kwargs:
-                    self.hbgc = pygame.Color(kwargs['hbgc'])
-                else:
-                    self.hbgc = pygame.Color('green')
-        else:
-            self.function = None
-        self.rect = pygame.Rect(self.pos, self.size) # type: ignore
+            self.base_text_color = pygame.Color(kwargs.get('fgc', 'black'))
+            self.center_text = False
+        self.base_background_color = pygame.Color(kwargs.get('bgc', 'red'))
+        self.can_click = 'function' in kwargs
+        self.function = kwargs.get('function', None)
+        self.hover = kwargs.get('can_hover', False)
+        if 'hover' in kwargs:
+            self.hover_text_color = pygame.Color(kwargs.get('hfgc', 'white'))
+            self.hover_background_color = pygame.Color(kwargs.get('hbgc', 'green'))
         self.hovering = False
+    def load(self):
+        try:
+            with open(self.config_file, mode="r") as config_file:
+                self.config = json.load(config_file)
+        except FileNotFoundError:
+            sys.exit(errors.FILE_DELETED_WHILE_OPEN)
+
+    def update(self):
+        if not self.is_ready:
+            self.load()
+        if self.surf is None:
+            self.surf = variables.display if display_is_ready() else None
+            return
+        self.hovering = self.rect.collidepoint(pygame.mouse.get_pos())
+        self.clicked = self.can_click and pygame.event.peek(pygame.MOUSEBUTTONUP, False)
+        self.bgc = self.hover_background_color if self.hovering else self.base_background_color
+        self.fgc = self.hover_text_color if self.hovering else self.base_text_color
     def draw(self):
-        if self.hover:
-            self.hovering = self.rect.collidepoint(pygame.mouse.get_pos())
-        if self.hovering:
-            pygame.draw.rect(self.surf, self.hbgc, self.rect)
-            if self.text is not None:
-                label = self.font.render(self.text, True, self.hfgc)
-                lRect = label.get_rect()
-                lRect.center = self.rect.center
-                self.surf.blit(label, lRect)
-            if input.get_click(0) and self.function is not None:
-                self.function()
-        else:
-            pygame.draw.rect(self.surf, self.bgc, self.rect)
+        pygame.draw.rect(self.surf, self.bgc, self.rect)
         if self.text is not None:
             label = self.font.render(self.text, True, self.fgc)
             lRect = label.get_rect()
-            lRect.center = self.rect.center
             self.surf.blit(label, lRect)
+        self.function() if self.clicked else None
 
 class Menu:
     bformat =  """format for buttons
             Whether there are multiple buttons or not, just use a 2d matrix (e.g. [[BUTTON_OBJ]])
             
         """
-    def __init__(self, surface, name, mnu_id, bg="cyan", bgm=None, buttons=None):
+    def __init__(self, surface, name, bg="cyan", bgm=None, buttons=None):
+        """
+        Initializes a Menu instance.
 
+        Args:
+            surface (object): The surface object.
+            name (str): The name of the menu.
+            mnu_id (int): The menu ID.
+            bg (str or tuple or list, optional): The background color or image filepath. Defaults to "cyan".
+            bgm (object, optional): The background music filepath. Defaults to None.
+            buttons (list, optional): The list of buttons. Defaults to None.
+        """
+        self.name = name
         if buttons is None:
             buttons = [[Box(surface, (20,20), 10, 10, text="Hi!")]]
-        self.btns = buttons
+        self.buttons = buttons
+        self.background = pygame.Color(bg) if type(bg) == str and "." not in bg else bg if type(bg) in [tuple, list] else bg
         if type(bg) == str:
             if "." not in bg:
                 self.bgc = pygame.Color(bg)
@@ -113,12 +117,10 @@ class Menu:
             self.bgc = bg
         if bgm is not None:
             self.bgm = bgm
-        global menus, mnu
-        self.mnu_ID = mnu_id
-        new_id = ctypes.c_uint16(mnu_id)
-        if new_id.value not in menus:
-            menus[f"{new_id.value}"] = self
-            
+        menu_number = len(menus.keys())
+        print(menu_number)
+        menus.update({menu_number: self})
+        state.create(f"menu-{self.name}", buttons=self.buttons)
     def open(self):
         try:
             audio.load_music(self.bgm)
@@ -128,9 +130,15 @@ class Menu:
             print("there is no music")
         except Exception as e:
             print(e)
-        menus['current'] = self
-        files.set_state(0x00, self.mnu_ID)
+        menus.update({"current": self})
+        state.set_state(f"menu-{self.name}")
+    def draw(self):
+        for row in self.buttons:
+            for button in row:
+                button.draw()
 
-def openMenu(menu_id=0):
-    new_id = ctypes.c_uint16(menu_id)
-    menus[new_id.value].open()
+def create_menu(name, bg="cyan", bgm=None, buttons=None):
+    menus.update({name: Menu(pygame.display.get_surface(), name, bg, bgm, buttons)})
+
+def open_menu(menu_number: ctypes.c_uint8):
+    menus[menu_number].open()

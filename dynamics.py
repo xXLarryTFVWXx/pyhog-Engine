@@ -1,16 +1,16 @@
 import ctypes, math, random, functools, pygame, json
-from . import graphics, audio, files, variables
+from numpy import sign
+from . import graphics, audio, files, variables, level_handler, events, state
 from .CONSTANTS import *
+from . import level_handler
 
 BASE_CONFIG_PATH = "config/Characters"
 
-curlvl = None
 atkdur = 0
 grv = 0.25
-BLANK = (0,0,0,0)
 
 class Character(graphics.Spritesheet):
-    def __init__(self, surf, characterName, cells:None|dict[str, list[list[int]]]=None, pos:pygame.Vector2=pygame.Vector2(0)):
+    def __init__(self, surf, characterName, cells:None|dict[str, list[list[int]]]=None, pos:pygame.Vector2=pygame.Vector2(20)):
         """
             cells format:
             {
@@ -18,93 +18,104 @@ class Character(graphics.Spritesheet):
             }
         """
         self.name = characterName
-        super().__init__(f"Art/Characters/{self.name}/sheet.png", cells) # type: ignore Temporarily ignoring type to get rid of red squiggly
+        super().__init__(f"Art/Characters/{self.name}/sheet.png", cells)
         """If someone can collapse this code to improve readability please do."""
         self.config = {}
         self.config_path = f"{BASE_CONFIG_PATH}/{self.name}-config.json"
         self.load_config()
-        self.invulnerable: bool = False
         self.surf = surf
-        self.forward_velocity = self.xvel = self.yvel = 0
+        self.forward_velocity = 0
         self.up = -90 # this is in degrees
-        self.position = pygame.Vector2(20)
         self.layer = 0
+        self.position = pygame.Vector2(20)
         self.rect = pygame.Rect(self.position, (7, 9))
         self.coll_anchor = pygame.Vector2(self.rect.center)
         self.angle = 0
-        self.collision_radii = [9, 19]
+        self.setup_flags()
+
+    def load_config(self):
+        with open(self.config_path, mode="r") as config_file: 
+            self.config = json.load(config_file)
+            
+    def setup_flags(self):
+        self.invulnerable: bool = False
         self.loaded = False
+        self.top_speed_override = False
         self.grounded = False
         self.is_ball = False
         self.active_sensors = [True for _ in range(6)]
         self.location = "in air"
-    def activate_sensors(self):
-        self.active_sensors = [True for _ in range(6)]
-        if self.forward_velocity > 0:
-            self.active_sensors[4] = False
-        elif self.forward_velocity < 0:
-            self.active_sensors[5] = False
 
-        if self.grounded:
-            self.active_sensors[2:2] = [False, False]
-        elif self.yvel > 0:
-            self.active_sensors[2:4] = [False, False]
-        else:
-            self.active_sensors[:2] = [False, False]
-    def load_config(self):
-        with open(self.config_path, mode="r") as config_file: 
-            self.config = json.load(config_file)
+    def activate_sensors(self):
+        # bits are 0: front_ceiling, 1: left_wall, 2: right_wall, 3: back_ceiling, 4: front_floor, 5: back_floor
+        self.active_sensors = 0b000000
         
-    def update(self, drc: int, delta_time:float):
+
+    
+    def load_into_level(self, level_name):
+        self.position = level_handler.get_level_by_name(level_name).get("position", pygame.Vector2(20))
+        self.loaded = True
+    
+    def change_velocity(self, direction_held:int):
+        delta_time = pygame.time.Clock().get_time()
+        prior_velocity_sign = sign(self.forward_velocity)
+        if direction_held == 0:
+            self.forward_velocity -= min(abs(self.forward_velocity), GROUND_FRICTION) * math.sin(self.forward_velocity) * delta_time
+        else:
+            if not self.top_speed_override:
+                self.forward_velocity += self.config.get("acceleration", ACCELERATION) * direction_held if prior_velocity_sign == 1 else GROUND_FRICTION * direction_held
+                new_forward_velocity_sign = sign(self.forward_velocity)
+                self.forward_velocity = 0.5 * direction_held if new_forward_velocity_sign != prior_velocity_sign else self.forward_velocity
+            else:
+                self.forward_velocity *= 1.02
+        if not self.top_speed_override:
+            self.forward_velocity = pygame.math.clamp(self.forward_velocity, -self.config.get("top speed", 6), self.config.get("top speed", 6))
+        self.x_velocity, self.y_velocity = pygame.Vector2(self.forward_velocity, 0).rotate(self.angle)
+
+
+    def update(self, direction_held: int):
+        """
+        Updates the state of the object based on the given direction_held and delta time.
+        Only handles input if this has the player tag.
+        Args:
+            direction_held (int): The direction_held of movement (-1, 0, or 1).
+            delta_time (float): The time elapsed since the last update.
+
+        Returns:
+            None
+        """
         if not self.loaded:
             self.load()
-        self.up = self.angle - 90
-        if drc > 0:
-            if self.forward_velocity <= 0:
-                self.forward_velocity += GROUND_FRICTION
-                if self.forward_velocity >= 0:
-                    self.forward_velocity = 0.5
-            elif self.forward_velocity >= 0:
-                self.forward_velocity += self.config.get("acceleration", ACCELERATION)
-                self.forward_velocity = min(self.forward_velocity, self.config.get("top speed", 6))
-        elif drc < 0:
-            if self.forward_velocity >= 0:
-                self.forward_velocity -= GROUND_FRICTION
-                if self.forward_velocity <= 0:
-                    self.forward_velocity = -0.5
-            elif self.forward_velocity <= 0:
-                self.forward_velocity -= self.config.get("acceleration", ACCELERATION)
-                if abs(self.forward_velocity) > self.config.get("top speed", 6):
-                    self.forward_velocity = -self.config.get("top speed", 6)
-        else:
-            self.forward_velocity -= min(abs(self.forward_velocity), GROUND_FRICTION) * math.sin(self.forward_velocity) * delta_time
-        """Change Radii depending if we are in a ball or not"""
-        self.collision_radii = [14, 7] if self.is_ball else [19, 9]
+        self.change_velocity(direction_held)
         self.activate_sensors()
-        self.position += pygame.Vector2(self.forward_velocity, 0).rotate(self.angle)
+        self.move()
         self.up = self.angle - 90
-        # VSCode says no matching overrides on the following line.
-        self.rect = pygame.Rect(*self.position, 10, 10) # type: ignore
-        # I say if it ain't broke and it doesn't pose a security risk,
-        # don't fix it until you can figure out how to make it go faster.
-        self.rect.center = tuple(int(axis) for axis in self.position.xy) # type: ignore must be tuple otherwise VSCode will yell at you.
-        # It still yells at me.
-        self.location, angle_pre_equation = curlvl.collide(self) # type: ignore
-        # Magic conversion number do not touch
-        self.angle = (256-angle_pre_equation)*1.40625
-        # TODO: Instead of practically teleporting to the top of whatever surface you are on,
-        # Keep adding velocity to self until we are out of the wall.
-        while self.location == "underground":
-            self.position += pygame.Vector2(0,-1)
-            self.location, angle_pre_equation = curlvl.collide(self) # type: ignore
-        else:
-            self.grounded = self.location == "on surface"
-            if not self.grounded:
-                self.yvel += grv
-                self.yvel = min(self.yvel, self.config.get("top speed", 6))
-                self.position += pygame.Vector2(0, self.yvel)
+        self.location, self.angle_pre_equation = level_handler.curlvl.collide(self)
+        self.angle = math.floor((256-self.angle_pre_equation)*GENESIS_TO_MODERN) % 360 # this should ensure
         # Should I do this?  It doesn't call self.surf.flip so it should be alright.
         self.render()
+
+    def process_collision(self):
+        self.location, self.angle_pre_equation = level_handler.curlvl.collide(self)
+
+    def move(self):
+        self.position += pygame.Vector2(self.forward_velocity*self.direction_held, 0)
+        self.rect = pygame.Rect(self.position.xy, (10, 10))
+        self.rect.center = (int(self.position.x), int(self.position.y))
+        self.top_speed_override = self.location == "underground"
+        self.grounded = self.location == "on surface"
+        if not self.grounded:
+            self.y_velocity += grv
+            self.y_velocity = pygame.math.clamp(self.y_velocity, -16, self.config.get("top speed", 6))
+            self.yvel = min(self.yvel, self.config.get("top speed", 6))
+            self.position += pygame.Vector2(0, self.yvel)
+        else:
+            self.yvel = 0
+    def hurt(self):
+        if not self.invulnerable:
+            self.hits -= 1
+        if self.hits == 0:
+            pygame.event.post(pygame.event.Event(events.PLAYER_DEATH))
 
 def make_projectile(starting_position, angle, velocity, hurt_player=True):
     variables.projectiles.append({
@@ -113,116 +124,3 @@ def make_projectile(starting_position, angle, velocity, hurt_player=True):
         "velocity": velocity,
         "hurts player": hurt_player
     })
-class Boss(Character):
-    def __init__(self, surf, name, cells, spawn, hits=8, behaviors=(), on_destruct = None): # added default hits value, on_destruct is unused.
-        super().__init__(surf, name, cells)
-        self.spawn = spawn
-        self.hits = hits # TYPO fixed.
-        self.behaviors = behaviors
-        self.atkdur = 256
-    def update(self):
-        global atkdur
-        if len(self.behaviors) >= 2:
-            if self.atkdur == 0:
-                targetPos = None
-                atk = random.choice(self.behaviors).lower()
-                if atk['name'] == "moveleft":
-                    distance = self.position.distance_to(pygame.Vector2(-150,self.y))
-                elif atk['name'] == "moveright":
-                    distance = self.position.distance_to(pygame.Vector2(self.surf.width + 150, self.y))
-                elif atk['name'] == "movedown":
-                    self.targetPos = self.x, self.surf.height+150
-                    distance = self.position.distance_to(pygame.Vector2(self.x, self.surf.height+150))
-                elif atk['name'] == "moveup":
-                    distance = self.position.distance_to(pygame.Vector2(self.x, -150))
-                elif atk['name'] == "hover":
-                    atkdur = 120
-                elif atk['name'] == "fireleft":
-                    self.fire(180)
-                    atkdur = 180
-                elif atk['name'] == "fireright":
-                    self.fire(0)
-                    atkdur = 180
-                elif atk['name'] == "firedown":
-                    self.fire(90)
-                    atkdur = 180
-                elif atk['name'] == "fireup":
-                    self.fire(-90)
-                    atkdur = 180
-                elif atk['name'] == "fireto":
-                    self.fire(variables.character) # type: ignore
-                # if not targetPos == None:
-                #     atkdur = self.position.distance_to(pygame.Vector2(*targetPos)/6) # Still figuring out how long this should take.
-                
-    def fire(self, target: Character | float | int=0):
-        """This will eventually create an object"""
-        if not isinstance(target, (Character, float, int)):
-            raise TypeError("Target of Boss must be either an int or a Character.")
-        position = self.position
-        angle = 0
-        attack_speed = 60
-        if isinstance(target, Character):
-            angle = self.position.angle_to(target.position)
-            """Create the projectile and send it in the direction of the target."""
-        if isinstance(target, float):
-            angle = int(target)
-        
-        make_projectile(self.position, angle, attack_speed)
-        
-
-    
-class Level:
-    def __init__(self, surf, fg, colliders, name, lvl_id=1, bgm=None, bg=None, x=0, y=0):
-        self.surf, self.fg, self.colFiles, self.name, self.lvl_id, self.bgm, self.bg, self.x, self.y = surf, fg, colliders, name, ctypes.c_int8(lvl_id).value, bgm, bg, x, y
-    def load(self):
-        self.collision = {}
-        if len(self.colFiles) != 2:
-            raise NotImplementedError("I have yet to code in support for anything but 2 layers.")
-        for num, file in enumerate(self.colFiles):
-            self.collision[num] = graphics.load_image(file)
-        self.bgIMG = graphics.load_image(self.bg) if self.bg else None
-        if self.bgm:
-            audio.load_music(self.bgm)
-        self.pixel = (0,0,0,0)
-        self.fgIMG = graphics.load_image(self.fg)
-        self.start()
-    def start(self):
-        global curlvl
-        files.set_state(1, self.lvl_id)
-        if audio.get_busy():
-            audio.stop_music()
-        if self.bgm:
-            audio.play_music(-1)
-        self.started = True
-        curlvl = self
-    def unload(self):
-        """This only for sure unloads the music right now, I am currently working on code to "unload" everything else that is created in the load method"""
-        pygame.mixer.music.unload()
-        self.started = False
-        del self.fgIMG, self.pixel, self.bgIMG, self.collision
-    def collide(self, caller) -> tuple[str, int]:
-        """
-            This method uses a custom format using the 4 channels available
-            Red Channel: Angle for Layer A
-            Blue Channel: Angle for Layer B
-            Green Channel: Used for Object Classification
-            Alpha Channel: Used for Object Identifier
-        """
-        collision_layer = (
-            self.collision[caller.layer]
-            if caller.layer != 0
-            else self.collision[0]
-        )
-        caller_pos = pygame.Vector2(int(caller.position.x), int(caller.position.y))
-        air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.angle)
-        self.pixel = collision_layer.get_at([int(axis) for axis in caller_pos.xy])
-        air_detector = int(air_detector_base[0]), int(air_detector_base[1])
-        air_pixel = collision_layer.get_at(air_detector)
-        at_surface = air_pixel == BLANK
-        grounded = self.pixel != BLANK
-        location = "underground" if grounded and not at_surface else "on surface" if at_surface and grounded else "in air"
-        return (location, self.pixel[3])
-    def draw(self):
-        if self.bgIMG:
-            self.surf.blit(self.bgIMG, (self.x, 0))
-        self.surf.blit(self.fgIMG, (self.x, self.y))

@@ -1,4 +1,5 @@
 import os, functools, pygame
+from . import variables
 class Spritesheet:
     def __init__(self, filename, cells:dict={"stand":[(0,0,64,64)]}):
         """Surface must be provided by the inheriting """
@@ -26,6 +27,14 @@ class Spritesheet:
         self.nextFrame()
 
 imgext = ["png", "jpeg", "jpg", "jpe", "jfif", "bmp", "gif", "dip", "tiff", "tif", "heic"]
+
+variables
+
+def get_display():
+    return variables.display
+
+def set_display(size, fullscreen):
+    variables.display = pygame.display.set_mode(size, fullscreen=fullscreen)
 
 def load_image(filename=None, convert=True):
     if filename is None:

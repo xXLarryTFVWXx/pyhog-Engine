@@ -1,0 +1,8 @@
+if right wall sensor detects collision, move to where it's visually one to the left, inverse for the left wall sensor
+if both wall sensors are active, move in opposite direction of what's held.
+
+If any ceiling sensor detects collision, stop moving up
+if any floor sensor detects collsion, stop falling.
+if both floor and ceiling sensors detect collision:
+    if there is enough space to spin, spin into the ball.
+    if there isn't enough space to change into the ball state, then kill the character.

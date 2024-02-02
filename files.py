@@ -7,16 +7,11 @@ __YEAR__ = (__REALYEAR__ // 256, __REALYEAR__ % 256)
 __MONTH__ = 0x00
 __DAY__ = 13
 
-VER = f"{chr(__BRANCH__)}{chr(__YEAR__[0])}{chr(__YEAR__[1])}{chr(__MONTH__)}{chr(__DAY__)}"
-engine_version = 0
-engine_version = int("".join([str(ord(_)) for _ in VER]))
+VER = f"DEV_10_31_2023"
 """Header building"""
 
-HeaderLen = 0x08
+HeaderLen = len(VER)
 PADDING = 0x7f
-FILE_TYPES = {0x00: "state", 0x01: "save"}
-MODES = {0x00: "menu", 0x01: "level"}
-HEADER = bytes(f"{chr(HeaderLen)}{VER}{chr(PADDING)}".encode())
 
 class VersionError(Exception):
     def __init__(self, msg):
@@ -25,6 +20,7 @@ class VersionError(Exception):
 
 # This is currently unused.
 def verify_version(file, data):
+    raise NotImplementedError
     """Verifies that the data's version is the same as the above Version"""
     file_ver = "".join(str(num) for num in data[1:5])
     # FIXME: I return an incorrect number
@@ -34,19 +30,6 @@ def verify_version(file, data):
         raise VersionError(f"Uh oh, looks like this file is {version_delta} versions behind.")
     return True
 
-# def get_state() -> str:
-#     """Gets the current state of the game with an external file"""
-#     with open("state.phg", "rb") as f:
-#         data = f.read()
-#         # if verify_version(f"state.phg", data):
-#         """verision verification temporarily removed"""
-#         return MODES[data[-2]], data[-1]
-
-def set_state(mode, ID:int) -> None:
-    """Sets the current state of the game with an external file"""
-    with open("state.phg", "wb") as f:
-        f.write(HEADER + bytes(f"{chr(mode)}{chr(ID)}".encode()))
-        
 def save(fname, data:str):
     with open(f"{fname}.phg", 'wb') as f:
         f.write(f"{VER} {data}".encode())
@@ -54,8 +37,3 @@ def save(fname, data:str):
 def load(fname):
     with open(f"{fname}.phg", "rb") as f:
         full = f.read()
-
-
-
-if __name__ != "__main__":
-    set_state(0, 0)
