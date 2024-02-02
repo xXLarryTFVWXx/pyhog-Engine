@@ -39,10 +39,7 @@
 import os, sys, math, functools, pygame
 from . import CONSTANTS, dynamics, audio, state, level_handler, files, graphics, gui, input, variables, events
 github = "xxlarytfvwxx"
-# set_state = files.set_state
-# get_state = files.get_state
 Hbtns = False
-# state = get_state()
 def ON():
     audio.ON()
     pygame.init()

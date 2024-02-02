@@ -46,13 +46,13 @@ class Level:
         )
         caller_pos = pygame.Vector2(int(caller.position.x), int(caller.position.y))
         air_detector_base = pygame.Vector2(caller_pos) + pygame.Vector2(0,1).rotate(caller.angle)
-        self.pixel = collision_layer.get_at([int(axis) for axis in caller_pos.xy])
+        pixel = collision_layer.get_at([int(axis) for axis in caller_pos.xy])
         air_detector = int(air_detector_base[0]), int(air_detector_base[1])
         air_pixel = collision_layer.get_at(air_detector)
         at_surface = air_pixel == BLANK
-        grounded = self.pixel != BLANK
+        grounded = pixel != BLANK
         location = "underground" if grounded and not at_surface else "on surface" if at_surface and grounded else "in air"
-        return (location, self.pixel[3])
+        return (location, pixel[3])
     def draw(self):
         if self.bgIMG:
             self.surf.blit(self.bgIMG, (self.x, 0))

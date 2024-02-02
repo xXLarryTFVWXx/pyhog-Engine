@@ -30,14 +30,6 @@ def verify_version(file, data):
         raise VersionError(f"Uh oh, looks like this file is {version_delta} versions behind.")
     return True
 
-# def get_state() -> str:
-#     """Gets the current state of the game with an external file"""
-#     with open("state.phg", "rb") as f:
-#         data = f.read()
-#         # if verify_version(f"state.phg", data):
-#         """verision verification temporarily removed"""
-#         return MODES[data[-2]], data[-1]
-        
 def save(fname, data:str):
     with open(f"{fname}.phg", 'wb') as f:
         f.write(f"{VER} {data}".encode())

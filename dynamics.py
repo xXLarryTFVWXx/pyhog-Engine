@@ -1,6 +1,6 @@
 import ctypes, math, random, functools, pygame, json
 from numpy import sign
-from . import graphics, audio, files, variables, level_handler, events
+from . import graphics, audio, files, variables, level_handler, events, state
 from .CONSTANTS import *
 from . import level_handler
 
@@ -18,7 +18,7 @@ class Character(graphics.Spritesheet):
             }
         """
         self.name = characterName
-        super().__init__(f"Art/Characters/{self.name}/sheet.png", cells) # type: ignore Temporarily ignoring type to get rid of red squiggly
+        super().__init__(f"Art/Characters/{self.name}/sheet.png", cells)
         """If someone can collapse this code to improve readability please do."""
         self.config = {}
         self.config_path = f"{BASE_CONFIG_PATH}/{self.name}-config.json"
@@ -49,23 +49,23 @@ class Character(graphics.Spritesheet):
     def activate_sensors(self):
         # bits are 0: front_ceiling, 1: left_wall, 2: right_wall, 3: back_ceiling, 4: front_floor, 5: back_floor
         self.active_sensors = 0b000000
-        # modify active_sensors based on x_velocity and y_velocity which are from
+        
 
     
     def load_into_level(self, level_name):
         self.position = level_handler.get_level_by_name(level_name).get("position", pygame.Vector2(20))
         self.loaded = True
     
-    def change_velocity(self, direction:int):
+    def change_velocity(self, direction_held:int):
         delta_time = pygame.time.Clock().get_time()
-        if direction == 0:
+        prior_velocity_sign = sign(self.forward_velocity)
+        if direction_held == 0:
             self.forward_velocity -= min(abs(self.forward_velocity), GROUND_FRICTION) * math.sin(self.forward_velocity) * delta_time
         else:
-            prior_velocity_sign = sign(self.forward_velocity)
             if not self.top_speed_override:
-                self.forward_velocity += self.config.get("acceleration", ACCELERATION) * direction if prior_velocity_sign == 1 else GROUND_FRICTION * direction
+                self.forward_velocity += self.config.get("acceleration", ACCELERATION) * direction_held if prior_velocity_sign == 1 else GROUND_FRICTION * direction_held
                 new_forward_velocity_sign = sign(self.forward_velocity)
-                self.forward_velocity = 0.5 * direction if new_forward_velocity_sign != prior_velocity_sign else self.forward_velocity
+                self.forward_velocity = 0.5 * direction_held if new_forward_velocity_sign != prior_velocity_sign else self.forward_velocity
             else:
                 self.forward_velocity *= 1.02
         if not self.top_speed_override:
@@ -73,12 +73,12 @@ class Character(graphics.Spritesheet):
         self.x_velocity, self.y_velocity = pygame.Vector2(self.forward_velocity, 0).rotate(self.angle)
 
 
-    def update(self, direction: int):
+    def update(self, direction_held: int):
         """
-        Updates the state of the object based on the given direction and delta time.
+        Updates the state of the object based on the given direction_held and delta time.
         Only handles input if this has the player tag.
         Args:
-            drc (int): The direction of movement (-1, 0, or 1).
+            direction_held (int): The direction_held of movement (-1, 0, or 1).
             delta_time (float): The time elapsed since the last update.
 
         Returns:
@@ -86,24 +86,23 @@ class Character(graphics.Spritesheet):
         """
         if not self.loaded:
             self.load()
-        self.change_velocity()
+        self.change_velocity(direction_held)
         self.activate_sensors()
-        self.rect = pygame.Rect(self.position.xy, (10, 10))
-        self.rect.center = (int(self.position.x), int(self.position.y))
-        self.up = self.angle - 90
-        self.location, angle_pre_equation = level_handler.curlvl.collide(self)
-        # Using the modulo to ensure our angle is between 0-360 exclusive
-        self.angle = ((256-angle_pre_equation)*GENESIS_TO_MODERN) % 360
-        self.process_collision()
         self.move()
+        self.up = self.angle - 90
+        self.location, self.angle_pre_equation = level_handler.curlvl.collide(self)
+        self.angle = math.floor((256-self.angle_pre_equation)*GENESIS_TO_MODERN) % 360 # this should ensure
         # Should I do this?  It doesn't call self.surf.flip so it should be alright.
         self.render()
+
     def process_collision(self):
         self.location, self.angle_pre_equation = level_handler.curlvl.collide(self)
+
     def move(self):
+        self.position += pygame.Vector2(self.forward_velocity*self.direction_held, 0)
+        self.rect = pygame.Rect(self.position.xy, (10, 10))
+        self.rect.center = (int(self.position.x), int(self.position.y))
         self.top_speed_override = self.location == "underground"
-        self.position += pygame.Vector2(self.forward_velocity*self.direction, 0)
-        self.process_collision()
         self.grounded = self.location == "on surface"
         if not self.grounded:
             self.y_velocity += grv

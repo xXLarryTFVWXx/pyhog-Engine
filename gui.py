@@ -1,8 +1,11 @@
-import ctypes, math, pygame
-
-from . import state, files, audio, input
+import os, sys, ctypes, math, json, pygame
+from re import S
+from . import state, files, audio, input, variables, errors
 
 menus = {}
+
+def display_is_ready():
+    return variables.display is not None
 
 class Window:
     def __init__(self, height, width, bgcolor="black", title="pyhog-engine", fullscreen=False):
@@ -33,62 +36,55 @@ class Window:
         pygame.event.clear()
 
 class Box:
-    def __init__(self, surf, pos=None, width=0, height=0, **kwargs):
-        if pos is None:
-            pos = [0,0]
-        self.surf = surf
-        self.pos = [axis * 1.0 for axis in pos]
+    def __init__(self, config_file: None | str=None, pos: pygame.Vector2 = None, width=0, height=0, **kwargs):
+        if type(config_file) == str and config_file[-4:].lower() == 'json':
+            if os.path.isfile(config_file):
+                self.config_file = config_file
+                self.is_ready = False
+                self.config = object()
+                return
+        self.position = pos if pos else pygame.Vector2(0, 0)
+        self.surface: pygame.Surface = variables.display
         self.size = list(kwargs["size"]) if 'size' in kwargs else [128, 64]
+        self.rect = pygame.Rect(self.pos, self.size)
         if 'text' in kwargs:
             self.font = pygame.font.SysFont(pygame.font.get_default_font(), 28)
             self.text = kwargs['text']
             self.size = [size + 10.0 for size in self.font.size(self.text)]
-            self.rect = pygame.Rect(self.pos, self.size)
-            if 'fgc' not in kwargs:
-                self.fgc = pygame.Color('black')
-
-            else:
-                self.fgc = pygame.Color(kwargs['color'])
-            self.base_text_color = self.fgc
-
-        if 'bgc' in kwargs:
-            self.bgc = pygame.Color(kwargs['bgc'])
-
-        else:
-            self.bgc = pygame.Color('red')
-        self.base_background_color = self.bgc
-        self.hover = False
-        self.has_click = 'function' in kwargs
-        if 'function' in kwargs:
-            self.function = kwargs['function']
-            if 'hover' in kwargs:
-                self.hover = True
-                if 'hfgc' in kwargs:
-                    self.hfgc = pygame.Color(kwargs['hfgc'])
-                else:
-                    self.hfgc = pygame.Color('white')
-                if 'hbgc' in kwargs:
-                    self.hbgc = pygame.Color(kwargs['hbgc'])
-                else:
-                    self.hbgc = pygame.Color('green')
-        else:
-            self.function = None
-        self.rect = pygame.Rect(self.pos, self.size) # type: ignore
+            self.base_text_color = pygame.Color(kwargs.get('fgc', 'black'))
+            self.center_text = False
+        self.base_background_color = pygame.Color(kwargs.get('bgc', 'red'))
+        self.can_click = 'function' in kwargs
+        self.function = kwargs.get('function', None)
+        self.hover = kwargs.get('can_hover', False)
+        if 'hover' in kwargs:
+            self.hover_text_color = pygame.Color(kwargs.get('hfgc', 'white'))
+            self.hover_background_color = pygame.Color(kwargs.get('hbgc', 'green'))
         self.hovering = False
+    def load(self):
+        try:
+            with open(self.config_file, mode="r") as config_file:
+                self.config = json.load(config_file)
+        except FileNotFoundError:
+            sys.exit(errors.FILE_DELETED_WHILE_OPEN)
+
     def update(self):
+        if not self.is_ready:
+            self.load()
+        if self.surf is None:
+            self.surf = variables.display if display_is_ready() else None
+            return
         self.hovering = self.rect.collidepoint(pygame.mouse.get_pos())
-        self.clicked = self.hovering and input.get_click(0)
+        self.clicked = self.can_click and pygame.event.peek(pygame.MOUSEBUTTONUP, False)
+        self.bgc = self.hover_background_color if self.hovering else self.base_background_color
+        self.fgc = self.hover_text_color if self.hovering else self.base_text_color
     def draw(self):
-        self.bgc = self.hbgc if self.hovering else self.base_background_color
-        self.fgc = self.fbgc if self.hovering else self.base_text_color
         pygame.draw.rect(self.surf, self.bgc, self.rect)
         if self.text is not None:
             label = self.font.render(self.text, True, self.fgc)
             lRect = label.get_rect()
-            lRect.center = self.rect.center
             self.surf.blit(label, lRect)
-        if self.has_click and self.clicked():
-            self.function()
+        self.function() if self.clicked else None
 
 class Menu:
     bformat =  """format for buttons

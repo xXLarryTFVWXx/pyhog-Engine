@@ -7,7 +7,7 @@ states = {
     "current": None
 }
 
-def query():
+def query() -> None | dict[str, Any]:
     return states.get(states.get("current", None), None)
 
 def create(name: str, **information):
@@ -21,3 +21,5 @@ def end():
     state = query()
     if state is not None:
         state['close']()
+
+__all__ = ('query', 'create', 'set_state', 'end')
