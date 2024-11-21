@@ -1,0 +1,2 @@
+Genesis uses a 9-bit color format.
+Binary file is stored and read in bytes (8-bits)

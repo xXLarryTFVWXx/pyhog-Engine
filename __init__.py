@@ -37,27 +37,21 @@
             
 """
 import os, sys, math, functools, pygame
-from . import CONSTANTS, dynamics, audio, state, level_handler, files, graphics, gui, input, variables, events
+from . import CONSTANTS, dynamics, audio, level_handler, files, graphics, gui, input, variables, events
+from .dynamics import *
+from .state import *
 github = "xxlarytfvwxx"
 Hbtns = False
-def ON():
+def ON(window_size=(600,600)):
     audio.ON()
     pygame.init()
+    pygame.display.set_icon(graphics.load_image("art/icon.png", False))
     
 def OFF():
     pygame.quit()
 
-def load_Music(file):
-    pygame.mixer_music.load(file)
-def play_music(loop=0, t=0.0):
-    pygame.mixer_music.play(loop)
-def pause_music():
-    pygame.mixer_music.pause()
-def stop_music():
-    pygame.mixer_music.stop()
-def get_busy():
-    return bool(pygame.mixer_music.get_busy())
-def music_volume(vol):
-    pygame.mixer_music.set_volume(vol)
-def clock():
-    return pygame.time.Clock()
+def create_window(window_size=(600,600), flags=0, bit_depth=0, monitor=0,vsync=0):
+    pygame.display.set_mode(window_size)
+
+def set_title(title):
+    pygame.display.set_caption(title)

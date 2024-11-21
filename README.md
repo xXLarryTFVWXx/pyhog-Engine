@@ -8,3 +8,5 @@ I am following [Sonic Retro's](https://info.sonicretro.org) [Sonic Physics Guide
 Please note that this repository might not be the *most* up-to-date, because most of the time my computer is not connected to the internet.
 
 Trello located [here](https://trello.com/b/02hpbEpB/pyhogengine)
+
+To be rewritten without use of AI.

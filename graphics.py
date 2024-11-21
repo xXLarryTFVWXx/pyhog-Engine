@@ -1,5 +1,31 @@
 import os, functools, pygame
 from . import variables
+
+layers = [
+    "background",
+    "rear enemy",
+    "rear player",
+    "rear level",
+    "front level",
+    "front enemy",
+    "front player"
+]
+
+PLACEHOLDER = pygame.sprite.Sprite()
+
+render_updates = pygame.sprite.LayeredUpdates([PLACEHOLDER for _ in range(len(layers))])
+
+class sky_mod:
+    def __init__(self, art):
+        self.surf = pygame.display.get_surface()
+        self.art = art
+        self.loaded = False
+    def load(self):
+        self.drawer = load_image(self.art)
+        self.loaded = True
+    def draw(self):
+        self.surf.blit(self.drawer, (0,0))
+
 class Spritesheet:
     def __init__(self, filename, cells:dict={"stand":[(0,0,64,64)]}):
         """Surface must be provided by the inheriting """
@@ -8,19 +34,18 @@ class Spritesheet:
         self.frame = 0
         self.cycle = 'stand'
         self.cycleTimer = 120
-        self.x = self.y = 0
+        self.xpos = self.ypos = 0
     def load(self):
         self.sheet = pygame.image.load(self.filename).convert_alpha()
         self.loaded = True
-    def changeCycle(self, cycle, cycleTimer):
-        self.cycle = self.cells[cycle]
-        self.cycleTimer = cycleTimer
+    def changeCycle(self, cycle):
+        self.cycle = self.cells[cycle]["frames"]
+        self.cycleTimer = self.cells[cycle]["timer"]
     @functools.cache
     def nextFrame(self):
         if self.cycleTimer == 0:
             self.frame += 1
-            if self.frame >= len(self.cells[self.cycle]):
-                self.frame = 0
+            self.frame %= len(self.cycle)
         self.cycleTimer -= 1
     def render(self):
         self.surf.blit(self.sheet, (self.position.x, self.position.y), self.cells[self.cycle][self.frame]) # type: ignore
@@ -28,13 +53,8 @@ class Spritesheet:
 
 imgext = ["png", "jpeg", "jpg", "jpe", "jfif", "bmp", "gif", "dip", "tiff", "tif", "heic"]
 
-variables
-
-def get_display():
-    return variables.display
-
 def set_display(size, fullscreen):
-    variables.display = pygame.display.set_mode(size, fullscreen=fullscreen)
+    variables.display = pygame.display.set_mode(size, 0 if not fullscreen else pygame.FULLSCREEN)
 
 def load_image(filename=None, convert=True):
     if filename is None:
@@ -51,14 +71,3 @@ def load_image(filename=None, convert=True):
 
 def get_palette(image):
     return image.get_palette()
-
-class sky_mod:
-    def __init__(self, surf, art):
-        self.surf = surf
-        self.art = art
-        self.loaded = False
-    def load(self):
-        self.drawer = load_image(self.art)
-        self.loaded = True
-    def draw(self):
-        self.surf.blit(self.drawer, (0,0))
