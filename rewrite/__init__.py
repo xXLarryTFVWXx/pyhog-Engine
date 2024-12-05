@@ -1,1 +1,0 @@
-"""This is a rewrite of the library without the use of AI due to potential copyright and license concerns."""

@@ -1,7 +1,0 @@
-# @Software: VS Code
-# @Author  : xXLarryTFVWXx
-entity.py
-build.py
-*.bin
-test*.py
-# .gitignore

@@ -9,4 +9,5 @@ Please note that this repository might not be the *most* up-to-date, because mos
 
 Trello located [here](https://trello.com/b/02hpbEpB/pyhogengine)
 
-To be rewritten without use of AI.
+# Important!
+ Currently being rewritten without the use of AI tools
