@@ -1,0 +1,9 @@
+What do we need for the collision data?
+We need to know if there is a block there: 0x00 means no block
+We need to know the angle of the block.
+We need to know the height offset of the block.
+We need to get the angle of the block.
+
+We are limited to 255 angles + 1 to snap to the nearest multiple of 90
+0xff means snap to nearest 90 or just flat ground
+0x00

@@ -1,0 +1,11 @@
+games/mods can be made with json and some form of script file.
+I don't want it to be anything that can cause a security vulnerability, so no dlls.
+
+The root folder of the pack will hold the following files and folders:
+manifest.json: holds different information about the game pack, very similar to Minecraft bedrock edition's.
+pgim: holds the PGIM files for each menu and the headsup display
+art: holds all the art for the game
+audio: holds all the audio for the game
+characters: holds all the playable characters for the game
+
+audio is split into 

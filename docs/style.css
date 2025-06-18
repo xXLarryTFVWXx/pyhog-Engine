@@ -1,0 +1,31 @@
+* {
+    margin: 0 auto;
+    padding: 0;
+    border: 1px solid black
+}
+nav {
+    border-bottom: 1px solid black;
+    display: inline-block;
+    margin: 0 auto;
+    width: 100vw;
+}
+nav#topbar ul {
+    display: inline-block;
+    width: 100%;
+    margin: 0 auto;
+    background-color: red;
+    justify-content: space-evenly;
+}
+li {
+    display: inline-block;
+    margin: 0 auto;
+    width: 30%;
+    list-style-type: none;
+    background-color: aqua;
+    text-align: center;
+}
+
+h1, p {
+    width: 60vw;
+    text-align: center;
+}
