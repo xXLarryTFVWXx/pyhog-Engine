@@ -1,55 +1,82 @@
-import pygame
-from pygame import key as key_input, joystick, mouse
-from . import events
+# pyright: ignore[reportUnknownVariableType]
+from pygame import (
+    key as key_input,
+    mouse,  # pyright: ignore[reportUnusedImport]
+)
+from .type_definitions import *
+from .constants import *
+from . import default_map
 
-controls = {
+input_enabled: bool = False
+
+controls: ControlContainer = {
     "method": "WASD",
-    "WASD": {
-        "up": pygame.K_w,
-        "down": pygame.K_s,
-        "left": pygame.K_a,
-        "right": pygame.K_d,
-        "jump": pygame.K_j,
-        "attack": pygame.K_k,
-        "boost": pygame.K_l,
-        "stomp": pygame.K_m,
-    },
     "ARROWS": {
-        "up": pygame.K_UP,
-        "down": pygame.K_DOWN,
-        "left": pygame.K_LEFT,
-        "right": pygame.K_RIGHT,
-        "jump": pygame.K_s,
-        "attack": pygame.K_d,
-        "boost": pygame.K_f,
-        "stomp": pygame.K_v,
+        "attack": default_map.KEY_ATTACK,
+        "energy": default_map.KEY_ENERGY,
+        "ground": default_map.KEY_GROUND,
+        "jump": default_map.WASD_LEFT,
+        "movement": {
+            "up": default_map.ARR_UP,
+            "left": default_map.ARR_LEFT,
+            "down": default_map.ARR_DOWN,
+            "right": default_map.ARR_RIGHT
+        },
+    },
+    "WASD": {
+        "attack": default_map.KEY_ATTACK,
+        "energy": default_map.KEY_ENERGY,
+        "ground": default_map.KEY_GROUND,
+        "jump": default_map.WASD_JUMP,
+        "movement": {
+            "up": default_map.WASD_UP,
+            "left": default_map.WASD_LEFT,
+            "down": default_map.WASD_DOWN,
+            "right": default_map.WASD_RIGHT,
+        }
+    },
+    "CONTROLLER": {
+        "attack": default_map.JOY_ATTACK,
+        "energy": default_map.JOY_ENERGY,
+        "ground": default_map.JOY_GROUND,
+        "jump": default_map.JOY_JUMP,
+        "movement": {
+            "horizontal": default_map.MAIN_HORIZONTAL,
+            "vertical": default_map.MAIN_VERTICAL
+        }
+    },
+    "DEBUG": {
+        "fps": default_map.VIEW_FPS,
+        "level": default_map.VIEW_COLLISION,
+        "actors": default_map.VIEW_COLLISION,
+        "placer": default_map.PLACE_OBJECT,
+        "save": default_map.LEVEL_SAVE,
+        "quit": default_map.FORCE_QUIT
     }
 }
 
-if __debug__:
-    controls["DEBUG"] = {"quit": pygame.K_ESCAPE, "fps": pygame.K_KP1}
 
-
-def get_pressed(key: str = "") -> bool:
-    keys = key_input.get_pressed()
-    any_down = False
-    try:
-        any_down = keys.index(True) >= 0
-    except ValueError:
-        return False
+def get_key_pressed(key: str = "", method: CONTROLLER_METHODS = "WASD") -> bool:
+    keys: key_input.ScancodeWrapper = key_input.get_pressed()
+    any_down: bool = len(keys) > 1
 
     if not any_down:
         return False
+    # something is held down
+    if key == "": # Just looking for a button press?
+        return True
 
-    if __debug__:
-        for key_name, scancode in controls["DEBUG"].items:
-            if keys[scancode]:
+    # I don't know if this is hacky or not.
+    for key_name, key_code in controls[method].items():
+        if isinstance(key_code, int):
+            if keys[key_code] and key.lower() == key_name:
                 return True
-    if keys in controls.keys():
-        for key_name, scancode in controls[controls.get("method", "WASD")]:
-            if keys[scancode]:
-                return True
-
+            continue
+        if isinstance(key_code, dict):
+            for move_key, move_code in key_code.items(): # pyright: ignore[reportUnknownVariableType]
+                if keys[move_code] and key.lower() == move_key:
+                    return True
     return False
 
-__all__ = ["get_pressed"]
+
+__all__ = ["get_key_pressed"]

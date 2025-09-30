@@ -1,31 +1,118 @@
-import os
 from warnings import warn
 import pygame
 import pygame_gui as gui
-from . import files
+from . import files, type_definitions
 
 Window: pygame.Window
 Manager: gui.UIManager
 
 
-def genesis_to_color(color_data: bytes) -> pygame.Color:
+class Background(type_definitions.Background):
+    def __post_init__(self):
+        if self.parent is None:
+            self.parent = Window.get_surface()
+
+    def scroll(self, dx: int = 0, dy: int = 0) -> None:
+        if self.scroll_data["direction"].lower().strip() in ("None", ""):
+            return
+        if self.scroll_data["direction"].lower().strip() == "horizontal":
+            self.position += pygame.Vector2(dx, 0)
+            return
+        if self.scroll_data["direction"].lower().strip() == "vertical":
+            self.position += pygame.Vector2(0, dy)
+            return
+
+    def render(self) -> list[pygame.Rect]:
+        if self.scroll_data["direction"].lower().strip() in ("None", ""):
+            return [self.get_rect()]
+        areas: list[pygame.Rect] = []
+        if self.scroll_data["direction"].lower().strip() == "horizontal":
+            vertical_offset = 0
+            horizontal_offset = 0
+            for scroll_section in self.scroll_data["data"]:
+                if (
+                    self.scroll_data["direction"].lower().strip() == "horizontal"
+                    and horizontal_offset >= self.height
+                ) or (
+                    self.scroll_data["direction"].lower().strip() == "vertical"
+                    and horizontal_offset >= self.width
+                ):
+                    break
+                if scroll_section["size"] < 1:
+                    horizontal_overflow = pygame.math.clamp(
+                        self.position.x
+                        + getattr(self.parent or Window.get_surface(), "width")
+                        - self.width,
+                        0,
+                        self.height,
+                    )
+                    vertical_overflow = pygame.math.clamp(
+                        self.position.y + scroll_section["size"] - self.height,
+                        0,
+                        getattr(self.parent or Window.get_surface(), "height"),
+                    )
+                    areas.append(
+                        pygame.Rect(
+                            self.position.x
+                            + getattr(self.parent or Window.get_surface(), "x"),
+                            vertical_offset,
+                            getattr(self.parent or Window.get_surface(), "width")
+                            - horizontal_overflow,
+                            scroll_section["size"] - vertical_overflow,
+                        )
+                    )
+                    if horizontal_overflow > 0:
+                        areas.append(
+                            pygame.Rect(
+                                0,
+                                vertical_offset,
+                                horizontal_overflow,
+                                scroll_section["size"],
+                            )
+                        )
+                    if vertical_overflow > 0:
+                        areas.append(
+                            pygame.Rect(
+                                horizontal_offset,
+                                0,
+                                scroll_section["size"],
+                                vertical_overflow,
+                            )
+                        )
+        return areas
+
+
+def genesis_to_color(color_data: int) -> pygame.Color:
     """
-    pixel format: 0000 RRR0 GGG0 BBB0
+    pixel format: BBB0 GGG0 RRR0
     We ignore the first byte, which is removed in load_genesis_image_binary
     """
     print("{color start}")
-    print([bin(color)[2:] for color in color_data])
+    print([bin(color_data)[2:]])
     new_color = pygame.Color(
-        (color_data[1] & 0b1110) / 0b1110 * 255,
-        (color_data[1] >> 4) / 0b1110 * 255,
-        (color_data[0]) / 0b1110 * 255,
+        (color_data & 0b1110) << 4,
+        color_data & 0b1110_0000,
+        (color_data & 0b1110_0000_0000) >> 4,
     )
     return new_color
 
-def color_to_genesis(color:tuple) -> bytes:
-    red = int(color[0] / 255 * 0b1110)
-    green = int(color[1] / 255 * 0b1110) << 4
-    blue = int(color[2] / 255 * 0b1110)
+
+def color_to_genesis(color: int | tuple[int, int, int] | pygame.Color) -> bytes:
+    red = green = blue = 0
+    if isinstance(color, int):
+        red = int(color / 255 * 0b1110)
+        green = int(color / 255 * 0b1110_0000)
+        blue = int(color / 255 * 0b1110)
+    elif isinstance(color, tuple):
+        red = int(color[0] / 255 * 0b1110)
+        green = int(color[1] / 255 * 0b1110_0000)
+        blue = int(color[2] / 255 * 0b1110)
+    elif isinstance(
+        color, pygame.Color
+    ):  # pyright: ignore[reportUnnecessaryIsInstance]
+        red = int(color.r / 255 * 0b1110)
+        green = int(color.g / 255 * 0b1110_0000)
+        blue = int(color.b / 255 * 0b1110)
     print(f"{color=}")
     print(f"{red=}{green=}{blue=}")
     result = f"{chr(blue)}{chr(red+green)}".encode("ISO 8859-1")
@@ -33,19 +120,26 @@ def color_to_genesis(color:tuple) -> bytes:
     return result
 
 
-def load_genesis_palette(palette_source):
-    with open(palette_source, 'rb') as source:
-        raw_data = source.read()
-    data = []
-    for index in range(0, len(raw_data), 2): 
-        data.append([raw_data[index], raw_data[index+1]])
-    return [genesis_to_color(color) for color in data]
+def load_genesis_palette(palette_source: pygame.typing.FileLike):
+    assert isinstance(palette_source, (str, bytes)), TypeError(
+        "This muse be either a string or bytes object"
+    )
+    data: list[pygame.Color]
+    with open(palette_source, "rb") as source:
+        raw_data: bytes = source.read()
+        color_word: int = 0
+        data: list[pygame.Color] = []
+        for index, raw_byte in enumerate(raw_data):
+            color_word = raw_byte << (8 * (index + 1) & 1)
+            if index & 1 == 1:
+                data.append(genesis_to_color(color_word))
+    return data
+
 
 def load_genesis_image_binary(filename: str | bytes) -> list[pygame.Color]:
     with open(filename, "rb") as source:
-        raw_data: list[bytes] = [b"0"]
+        raw_data: bytes = source.read(4)
     data: list[pygame.Color] = [genesis_to_color(color_data) for color_data in raw_data]
-
     if __debug__:
         from pprint import pprint
 
@@ -53,7 +147,7 @@ def load_genesis_image_binary(filename: str | bytes) -> list[pygame.Color]:
     return data
 
 
-def load_image(filename) -> pygame.Surface:
+def load_image(filename: str) -> pygame.Surface:
     files.verify_path(filename)
     return pygame.image.load(filename).convert_alpha()
 
@@ -84,19 +178,17 @@ def get_manager():
         )
 
 
-def get_color(color):
+def get_color(color: str):
     return pygame.Color(color)
 
 
-def test_palette(palette_file):
-    surface = pygame.Surface(
-        (16, 4)
-    )
+def test_palette(palette_file: pygame.typing.FileLike):
+    surface = pygame.Surface((16, 4))
     palette_data = load_genesis_palette(palette_file)
     for index, pixel_color in enumerate(palette_data):
-        surface.set_at((index%16, int(index//16)), pixel_color)
+        surface.set_at((index % 16, int(index // 16)), pixel_color)
     pygame.init()
-    win = pygame.display.set_mode((16,4), pygame.FULLSCREEN|pygame.SCALED)
+    win = pygame.display.set_mode((16, 4), pygame.FULLSCREEN | pygame.SCALED)
     print(len(palette_data))
     while True:
         for event in pygame.event.get():

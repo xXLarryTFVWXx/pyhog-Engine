@@ -4,16 +4,37 @@ from pygame import event as evt
 
 event = evt
 
+
 class Game_state(TypedDict):
-    objects: list
+    objects: list[object]
     transition: Optional[dict[str, Any]]
     next: Optional[str]
 
-null_state: Game_state = {
-    "objects": []
-}
 
-states: dict[Game_state]
+def set_state(new_state: str):
+    states.update(
+        active=states.get(
+            new_state,
+            Game_state({"next": None, "objects": [object()], "transition": None}),
+        )
+    )
+
+
+def new(name: str, **kwargs):
+    states[name] = kwargs
+
+
+def get_active() -> Game_state:
+    return states.get("active", NULL_STATE)
+
+
+def step():
+    next_state = states.get("active", NULL_STATE).get("next", NULL_STATE)
+    if next_state is not None:
+        states.update(active=states.get(next_state, NULL_STATE))
+
+
+states: dict[str, Game_state] = {}
 """
     states follow the format
     "[state_name]": {
@@ -40,23 +61,15 @@ states: dict[Game_state]
         # TODO: get variable names from the traceback.
 """
 
-
-def set_state(new_state: str):
-    states.update(active=states.get(new_state))
-
-
-def new(name, **kwargs):
-    states.update((name, kwargs))
-
-
-def get_active() -> dict[str, Any]:
-    return states.get("active", {"name": None})
-
-
-def step():
-    next_state = states.get("active", {"name": None, "next": None}).get("next")
-    if next_state is not None:
-        states.update(active=states.get(next_state, {"name": None}))
+NULL_STATE: Game_state = {"objects": [], "next": None, "transition": None}
+new("NULL_STATE", **NULL_STATE)
+zero_error_state: Game_state = {
+    "objects": [object()],
+    "next": "NULL_STATE",
+    "transition": None,
+}
+new("ERR-ZDE", **zero_error_state)
+QUIT: Game_state = {"objects": [], "next": None, "transition": None}
 
 
 __all__ = ["get_active", "step", "new", "set_state"]

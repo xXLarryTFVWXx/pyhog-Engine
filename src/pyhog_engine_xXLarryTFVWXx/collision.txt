@@ -2,8 +2,33 @@ What do we need for the collision data?
 We need to know if there is a block there: 0x00 means no block
 We need to know the angle of the block.
 We need to know the height offset of the block.
+We need to know the width offset of the block
 We need to get the angle of the block.
 
 We are limited to 255 angles + 1 to snap to the nearest multiple of 90
-0xff means snap to nearest 90 or just flat ground
-0x00
+0xff means snap to nearest 90 or flat ground
+
+[PVE collision]
+    if player is not invincible or spinning:
+        call player hurt
+        done
+    call enemy hurt
+    call player reflect
+    
+[player reflect]
+based on the center of the player
+    if player is grounded:
+        if invincible:
+            done
+    if player is contacting mostly on the side:
+        invert player horizontal velocity
+    if player is contacting mostly on the top or bottom:
+        invert player vertical velocity
+    done
+
+[boss hurt]
+    if boss is in recoil animation:
+        done
+    subtract 1 from health
+    if health is 0:
+        put boss death into the event stack
