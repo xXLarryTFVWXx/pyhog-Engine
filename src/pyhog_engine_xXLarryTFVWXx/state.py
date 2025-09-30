@@ -1,40 +1,10 @@
 from typing import Any, Optional, TypedDict
-from . import events
+from . import events # pyright: ignore[reportUnusedImport]
 from pygame import event as evt
 
 event = evt
 
 
-class Game_state(TypedDict):
-    objects: list[object]
-    transition: Optional[dict[str, Any]]
-    next: Optional[str]
-
-
-def set_state(new_state: str):
-    states.update(
-        active=states.get(
-            new_state,
-            Game_state({"next": None, "objects": [object()], "transition": None}),
-        )
-    )
-
-
-def new(name: str, **kwargs):
-    states[name] = kwargs
-
-
-def get_active() -> Game_state:
-    return states.get("active", NULL_STATE)
-
-
-def step():
-    next_state = states.get("active", NULL_STATE).get("next", NULL_STATE)
-    if next_state is not None:
-        states.update(active=states.get(next_state, NULL_STATE))
-
-
-states: dict[str, Game_state] = {}
 """
     states follow the format
     "[state_name]": {
@@ -60,15 +30,45 @@ states: dict[str, Game_state] = {}
         ZDE - Zero Division Error - You tried to divide by zero?
         # TODO: get variable names from the traceback.
 """
+class Game_state(TypedDict):
+    objects: list[object]
+    transition: Optional[dict[str, Any]]
+    next: Optional[str]
+
+
+def set_state(new_state: str):
+    states.update(
+        active=states.get(
+            new_state,
+            Game_state({"next": None, "objects": [object()], "transition": None}),
+        )
+    )
+
+states: dict[str, Game_state] = {}
+
+def new(name: str, state_information: Game_state):
+    states[name] = state_information
+
+
+def get_active() -> Game_state:
+    return states.get("active", NULL_STATE)
+
+
+def step():
+    next_state = states.get("active", NULL_STATE).get("next", NULL_STATE)
+    if next_state is not None:
+        states.update(active=states.get(next_state, NULL_STATE))
+
+
 
 NULL_STATE: Game_state = {"objects": [], "next": None, "transition": None}
-new("NULL_STATE", **NULL_STATE)
+new("NULL_STATE", NULL_STATE)
 zero_error_state: Game_state = {
     "objects": [object()],
     "next": "NULL_STATE",
     "transition": None,
 }
-new("ERR-ZDE", **zero_error_state)
+new("ERR-ZDE", zero_error_state)
 QUIT: Game_state = {"objects": [], "next": None, "transition": None}
 
 
