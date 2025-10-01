@@ -1,6 +1,9 @@
+from typing import BinaryIO
 from warnings import warn
 import pygame
 import pygame_gui as gui
+
+from pyhog_engine_xXLarryTFVWXx.game_math import Vector2D
 from . import files, type_definitions
 
 Window: pygame.Window
@@ -8,9 +11,16 @@ Manager: gui.UIManager
 
 
 class Background(type_definitions.Background):
-    def __post_init__(self):
-        if self.parent is None:
-            self.parent = Window.get_surface()
+
+    def __init__(
+        self,
+        source: BinaryIO | pygame.Color | type_definitions.typing.Sequence[int] | str | int,
+        parent: pygame.Surface | None = None,
+        position: Vector2D | None = None,
+        scroll_data: type_definitions.ScrollContainer = {"direction": "None", "data": [type_definitions.NO_SCROLL]}
+    ) -> None:
+        super().__init__(source, parent, position)
+        self.scroll_data = scroll_data
 
     def scroll(self, dx: int = 0, dy: int = 0) -> None:
         if self.scroll_data["direction"].lower().strip() in ("None", ""):
@@ -23,8 +33,13 @@ class Background(type_definitions.Background):
             return
 
     def render(self) -> list[pygame.Rect]:
+        if self.parent is None: # Should never hapen, but in case it does, blit to the screen directly
+            try:
+                self.parent = get_window().get_surface()
+            except Exception:
+                raise RuntimeError("OKay, no window was created, please try creating a window.")
         if self.scroll_data["direction"].lower().strip() in ("None", ""):
-            return [self.get_rect()]
+            return [pygame.Rect(self.position, self.area)]
         areas: list[pygame.Rect] = []
         if self.scroll_data["direction"].lower().strip() == "horizontal":
             vertical_offset = 0
@@ -32,24 +47,24 @@ class Background(type_definitions.Background):
             for scroll_section in self.scroll_data["data"]:
                 if (
                     self.scroll_data["direction"].lower().strip() == "horizontal"
-                    and horizontal_offset >= self.height
+                    and vertical_offset >= self.area.y
                 ) or (
                     self.scroll_data["direction"].lower().strip() == "vertical"
-                    and horizontal_offset >= self.width
+                    and horizontal_offset >= self.area.x
                 ):
                     break
                 if scroll_section["size"] < 1:
                     horizontal_overflow = pygame.math.clamp(
                         self.position.x
-                        + getattr(self.parent or Window.get_surface(), "width")
-                        - self.width,
+                        + (self.parent.width or get_window().get_surface().width)
+                        - self.area.x,
                         0,
-                        self.height,
+                        self.area.y,
                     )
                     vertical_overflow = pygame.math.clamp(
-                        self.position.y + scroll_section["size"] - self.height,
+                        self.position.y + scroll_section["size"] - self.area.y,
                         0,
-                        getattr(self.parent or Window.get_surface(), "height"),
+                        (self.parent.height or get_window().get_surface().height),
                     )
                     areas.append(
                         pygame.Rect(
@@ -85,7 +100,7 @@ class Background(type_definitions.Background):
 def genesis_to_color(color_data: int) -> pygame.Color:
     """
     pixel format: BBB0 GGG0 RRR0
-    We ignore the first byte, which is removed in load_genesis_image_binary
+    We ignore the first nibble, which is removed in load_genesis_image_binary
     """
     print("{color start}")
     print([bin(color_data)[2:]])
@@ -155,7 +170,7 @@ def load_image(filename: str) -> pygame.Surface:
 def make_window(title: str = "Pyhog-Engine", size: tuple[int, int] = (680, 420)):
     g = globals()
     g["Window"] = win = pygame.Window(title, size, pygame.WINDOWPOS_CENTERED)
-    g["Manager"] = gui.UIManager(size)
+    # g["Manager"] = gui.UIManager(size) # Will not use this until I know for certain how to use pygame-gui
     return win
 
 
@@ -167,15 +182,6 @@ def get_window():
             "Window was not created before attempting to access, default window created."
         )
         return make_window()
-
-
-def get_manager():
-    try:
-        return Manager
-    except NameError:
-        warn(
-            "UIManager was not created before attempting to access, default Manager created."
-        )
 
 
 def get_color(color: str):

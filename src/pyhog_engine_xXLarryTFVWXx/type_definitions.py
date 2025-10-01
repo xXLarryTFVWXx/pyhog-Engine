@@ -127,10 +127,10 @@ ALL_WRAP: WrappingData = {"horizontal": True, "vertical": True}
 
 
 class Displayable:
-    def __init__(self, source: typing.BinaryIO | game_types.ColorLike, parent: pygame.surface.Surface, position: typing.Optional[game_math.Vector2D]) -> None:
-        self.source = source
-        self.parent = parent
-        self.position = position or game_math.Vector2D(0)
+    def __init__(self, source: typing.BinaryIO | game_types.ColorLike, parent: typing.Optional[pygame.surface.Surface], position: typing.Optional[game_math.Vector2D]) -> None:
+        self.source: typing.BinaryIO | pygame.Color | game_types.SequenceLike[int] | str | int = source
+        self.parent: typing.Optional[pygame.Surface] = parent
+        self.position: game_math.Vector2D = position or game_math.Vector2D(0)
         self.area = pygame.Vector2(4)
 
 COLLISION_LAYERS: list[typing.Literal["frontTiles"] | typing.Literal["backTiles"]] = [
