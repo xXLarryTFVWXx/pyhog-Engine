@@ -1,13 +1,11 @@
 from typing import BinaryIO
 from warnings import warn
 import pygame
-import pygame_gui as gui
 
-from pyhog_engine_xXLarryTFVWXx.game_math import Vector2D
+from .game_math import Vector2D
 from . import files, type_definitions
 
 Window: pygame.Window
-Manager: gui.UIManager
 
 
 class Background(type_definitions.Background):
@@ -19,7 +17,7 @@ class Background(type_definitions.Background):
         position: Vector2D | None = None,
         scroll_data: type_definitions.ScrollContainer = {"direction": "None", "data": [type_definitions.NO_SCROLL]}
     ) -> None:
-        super().__init__(source, parent, position)
+        super().__init__(source, parent)
         self.scroll_data = scroll_data
 
     def scroll(self, dx: int = 0, dy: int = 0) -> None:
@@ -96,72 +94,6 @@ class Background(type_definitions.Background):
                         )
         return areas
 
-
-def genesis_to_color(color_data: int) -> pygame.Color:
-    """
-    pixel format: BBB0 GGG0 RRR0
-    We ignore the first nibble, which is removed in load_genesis_image_binary
-    """
-    print("{color start}")
-    print([bin(color_data)[2:]])
-    new_color = pygame.Color(
-        (color_data & 0b1110) << 4,
-        color_data & 0b1110_0000,
-        (color_data & 0b1110_0000_0000) >> 4,
-    )
-    return new_color
-
-
-def color_to_genesis(color: int | tuple[int, int, int] | pygame.Color) -> bytes:
-    red = green = blue = 0
-    if isinstance(color, int):
-        red = int(color / 255 * 0b1110)
-        green = int(color / 255 * 0b1110_0000)
-        blue = int(color / 255 * 0b1110)
-    elif isinstance(color, tuple):
-        red = int(color[0] / 255 * 0b1110)
-        green = int(color[1] / 255 * 0b1110_0000)
-        blue = int(color[2] / 255 * 0b1110)
-    elif isinstance(
-        color, pygame.Color
-    ):  # pyright: ignore[reportUnnecessaryIsInstance]
-        red = int(color.r / 255 * 0b1110)
-        green = int(color.g / 255 * 0b1110_0000)
-        blue = int(color.b / 255 * 0b1110)
-    print(f"{color=}")
-    print(f"{red=}{green=}{blue=}")
-    result = f"{chr(blue)}{chr(red+green)}".encode("ISO 8859-1")
-    print(result)
-    return result
-
-
-def load_genesis_palette(palette_source: pygame.typing.FileLike):
-    assert isinstance(palette_source, (str, bytes)), TypeError(
-        "This muse be either a string or bytes object"
-    )
-    data: list[pygame.Color]
-    with open(palette_source, "rb") as source:
-        raw_data: bytes = source.read()
-        color_word: int = 0
-        data: list[pygame.Color] = []
-        for index, raw_byte in enumerate(raw_data):
-            color_word = raw_byte << (8 * (index + 1) & 1)
-            if index & 1 == 1:
-                data.append(genesis_to_color(color_word))
-    return data
-
-
-def load_genesis_image_binary(filename: str | bytes) -> list[pygame.Color]:
-    with open(filename, "rb") as source:
-        raw_data: bytes = source.read(4)
-    data: list[pygame.Color] = [genesis_to_color(color_data) for color_data in raw_data]
-    if __debug__:
-        from pprint import pprint
-
-        pprint(data)
-    return data
-
-
 def load_image(filename: str) -> pygame.Surface:
     files.verify_path(filename)
     return pygame.image.load(filename).convert_alpha()
@@ -186,24 +118,5 @@ def get_window():
 
 def get_color(color: str):
     return pygame.Color(color)
-
-
-def test_palette(palette_file: pygame.typing.FileLike):
-    surface = pygame.Surface((16, 4))
-    palette_data = load_genesis_palette(palette_file)
-    for index, pixel_color in enumerate(palette_data):
-        surface.set_at((index % 16, int(index // 16)), pixel_color)
-    pygame.init()
-    win = pygame.display.set_mode((16, 4), pygame.FULLSCREEN | pygame.SCALED)
-    print(len(palette_data))
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    return
-        win.blit(surface)
-        pygame.display.flip()
-
 
 __all__ = ["load_image", "make_window", "get_window", "get_color"]

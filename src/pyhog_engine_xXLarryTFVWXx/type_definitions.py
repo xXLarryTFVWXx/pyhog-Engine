@@ -1,8 +1,8 @@
+from dataclasses import dataclass
 import typing
 from uuid import UUID
 import pygame
 import pygame.typing as game_types
-import pygame.surface
 import pygame.event as game_event  # pyright: ignore[reportUnusedImport]
 from pygame.joystick import JoystickType
 from . import game_math
@@ -125,12 +125,13 @@ HORIZONTAL_WRAP: WrappingData = {"horizontal": True, "vertical": False}
 VERTICAL_WRAP: WrappingData = {"horizontal": False, "vertical": True}
 ALL_WRAP: WrappingData = {"horizontal": True, "vertical": True}
 
-
+@dataclass
 class Displayable:
-    def __init__(self, source: typing.BinaryIO | game_types.ColorLike, parent: typing.Optional[pygame.surface.Surface], position: typing.Optional[game_math.Vector2D]) -> None:
-        self.source: typing.BinaryIO | pygame.Color | game_types.SequenceLike[int] | str | int = source
-        self.parent: typing.Optional[pygame.Surface] = parent
-        self.position: game_math.Vector2D = position or game_math.Vector2D(0)
+    source: typing.BinaryIO | pygame.Color | game_types.SequenceLike[int] | str | int
+    parent: typing.Optional[pygame.Surface]
+
+    def __post_init__(self) -> None:
+        self.position: game_math.Vector2D = game_math.Vector2D(0)
         self.area = pygame.Vector2(4)
 
 COLLISION_LAYERS: list[typing.Literal["frontTiles"] | typing.Literal["backTiles"]] = [
